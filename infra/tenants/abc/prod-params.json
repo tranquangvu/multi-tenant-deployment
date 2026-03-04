@@ -1,0 +1,5 @@
+[
+  { "ParameterKey": "TenantId", "ParameterValue": "abc" },
+  { "ParameterKey": "Environment", "ParameterValue": "prod" },
+  { "ParameterKey": "StackPrefix", "ParameterValue": "mt" }
+]

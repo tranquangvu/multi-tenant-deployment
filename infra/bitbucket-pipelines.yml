@@ -1,0 +1,87 @@
+# Bitbucket Pipelines — Infrastructure repo (multi-tenant CloudFormation)
+# Deploys to base (stage/prod) first; then optional promotion to selected tenants.
+# Uses 2 apps per tenant and stage + prod per tenant.
+
+image: atlassian/default-image:3
+
+definitions:
+  yaml-anchors:
+    - &install-aws
+        pipe: atlassian/aws-cli:1.0.0
+        variables:
+          AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+          AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+          AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+
+  steps:
+    - step: &deploy-tenant-env
+        name: Deploy tenant environment
+        script:
+          - chmod +x ./scripts/*.sh
+          - |
+            if [[ -n "${DEPLOY_TENANT_ID}" && -n "${DEPLOY_ENVIRONMENT}" ]]; then
+              ./scripts/deploy-tenant-env.sh "${DEPLOY_TENANT_ID}" "${DEPLOY_ENVIRONMENT}"
+            else
+              echo "DEPLOY_TENANT_ID and DEPLOY_ENVIRONMENT must be set"
+              exit 1
+            fi
+
+pipelines:
+  branches:
+    main:
+      - step:
+          name: Deploy Base Stage
+          deployment: base-stage
+          script:
+            - chmod +x ./scripts/*.sh
+            - ./scripts/deploy-tenant-env.sh base stage
+      - step:
+          name: Deploy Base Prod
+          deployment: base-prod
+          trigger: manual
+          script:
+            - chmod +x ./scripts/*.sh
+            - ./scripts/deploy-tenant-env.sh base prod
+
+  custom:
+    # Deploy single (tenant, environment) — e.g. DEPLOY_TENANT_ID=abc DEPLOY_ENVIRONMENT=stage
+    deploy-tenant:
+      - variables:
+          - name: DEPLOY_TENANT_ID
+            default: base
+          - name: DEPLOY_ENVIRONMENT
+            default: stage
+      - step:
+          name: Deploy to $DEPLOY_TENANT_ID / $DEPLOY_ENVIRONMENT
+          script:
+            - chmod +x ./scripts/*.sh
+            - ./scripts/deploy-tenant-env.sh "$DEPLOY_TENANT_ID" "$DEPLOY_ENVIRONMENT"
+
+    # Promote to multiple tenants (stage and/or prod). Set PROMOTE_TENANTS=abc,xyz and PROMOTE_ENVS=stage,prod
+    promote-tenants:
+      - variables:
+          - name: PROMOTE_TENANTS
+            default: ""
+          - name: PROMOTE_ENVS
+            default: "stage,prod"
+      - step:
+          name: Promote to selected tenants
+          trigger: manual
+          script:
+            - chmod +x ./scripts/*.sh
+            - |
+              if [[ -z "$PROMOTE_TENANTS" ]]; then
+                echo "Set PROMOTE_TENANTS (e.g. abc,xyz or 'all' for abc + xyz)"
+                exit 1
+              fi
+              TENANTS="$PROMOTE_TENANTS"
+              [[ "$PROMOTE_TENANTS" == "all" ]] && TENANTS="abc,xyz"
+              IFS=',' read -ra TARR <<< "$TENANTS"
+              IFS=',' read -ra EARR <<< "$PROMOTE_ENVS"
+              for t in "${TARR[@]}"; do
+                for e in "${EARR[@]}"; do
+                  echo "Deploying $t $e..."
+                  ./scripts/deploy-tenant-env.sh "$t" "$e" || { echo "Failed $t $e"; exit 1; }
+                done
+              done
+              echo "Promotion complete."

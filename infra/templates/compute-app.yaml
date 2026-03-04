@@ -1,0 +1,183 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Multi-tenant compute layer - ECS Fargate cluster and service per app. One stack per (TenantId, Environment, ApplicationId)."
+
+Parameters:
+  TenantId:
+    Type: String
+    Description: Tenant identifier (base, abc, xyz, ...)
+  Environment:
+    Type: String
+    AllowedValues: [stage, prod]
+    Description: Environment (stage or prod)
+  ApplicationId:
+    Type: String
+    Description: Application ID (app1, app2)
+  StackPrefix:
+    Type: String
+    Default: mt
+    Description: Prefix for stack and resource names
+  AppImageUri:
+    Type: String
+    Default: ""
+    Description: "(Optional) ECR image URI for the app. Leave empty for placeholder."
+  AppCpu:
+    Type: String
+    Default: "256"
+    Description: CPU units for Fargate task
+  AppMemory:
+    Type: String
+    Default: "512"
+    Description: Memory (MB) for Fargate task
+  DesiredCount:
+    Type: Number
+    Default: 1
+    MinValue: 0
+    MaxValue: 10
+    Description: Desired number of tasks
+
+Resources:
+  EcrRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}"
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {"rules":[{"rulePriority":1,"description":"Keep last 5 images","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":5},"action":{"type":"expire"}}]}
+      Tags:
+        - Key: TenantId
+          Value: !Ref TenantId
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ApplicationId
+          Value: !Ref ApplicationId
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-exec-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Tags:
+        - Key: TenantId
+          Value: !Ref TenantId
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ApplicationId
+          Value: !Ref ApplicationId
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-task-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Tags:
+        - Key: TenantId
+          Value: !Ref TenantId
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ApplicationId
+          Value: !Ref ApplicationId
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/ecs/${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}"
+      RetentionInDays: 30
+      Tags:
+        - Key: TenantId
+          Value: !Ref TenantId
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ApplicationId
+          Value: !Ref ApplicationId
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      Cpu: !Ref AppCpu
+      Memory: !Ref AppMemory
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: !Ref ApplicationId
+          Image:
+            !If [
+              HasImage,
+              !Ref AppImageUri,
+              !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}:latest",
+            ]
+          Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+          PortMappings:
+            - ContainerPort: 8080
+              Protocol: tcp
+          HealthCheck:
+            Command: ["CMD-SHELL", "echo ok || exit 1"]
+            Interval: 30
+            Timeout: 5
+            Retries: 2
+            StartPeriod: 60
+
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: TaskDefinition
+    Properties:
+      ServiceName: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-svc"
+      Cluster: !ImportValue
+        Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-ClusterName"
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref DesiredCount
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets:
+            - !ImportValue
+              Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-PrivateSubnet1Id"
+            - !ImportValue
+              Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-PrivateSubnet2Id"
+          SecurityGroups:
+            - !ImportValue
+              Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-AppSecurityGroupId"
+
+Conditions:
+  HasImage: !Not [!Equals [!Ref AppImageUri, ""]]
+
+Outputs:
+  EcrRepoUri:
+    Description: ECR repository URI for this app
+    Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}"
+    Export:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-EcrRepoUri"
+  ServiceName:
+    Description: ECS service name
+    Value: !GetAtt Service.Name
+    Export:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-ServiceName"
+  LogGroupName:
+    Description: CloudWatch log group for app
+    Value: !Ref LogGroup
+    Export:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-LogGroupName"

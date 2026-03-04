@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Multi-tenant data layer - RDS PostgreSQL per app. One stack per (TenantId, Environment, ApplicationId)."
+
+Parameters:
+  TenantId:
+    Type: String
+    Description: Tenant identifier (base, abc, xyz, ...)
+  Environment:
+    Type: String
+    AllowedValues: [stage, prod]
+    Description: Environment (stage or prod)
+  ApplicationId:
+    Type: String
+    Description: Application ID (app1, app2)
+  StackPrefix:
+    Type: String
+    Default: mt
+    Description: Prefix for stack and resource names
+  DbInstanceClass:
+    Type: String
+    Default: db.t3.micro
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t3.medium
+    Description: RDS instance class
+  DbAllocatedStorage:
+    Type: Number
+    Default: 20
+    MinValue: 20
+    MaxValue: 65536
+    Description: Allocated storage (GB)
+  DbSecretArn:
+    Type: String
+    Description: ARN of the DB secret (from secrets stack for this app). RDS will use username/password from this secret.
+
+Resources:
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub "Subnet group for ${ApplicationId} in ${TenantId}-${Environment}"
+      SubnetIds:
+        - !ImportValue
+          Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-PrivateSubnet1Id"
+        - !ImportValue
+          Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-PrivateSubnet2Id"
+      Tags:
+        - Key: TenantId
+          Value: !Ref TenantId
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ApplicationId
+          Value: !Ref ApplicationId
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  DbInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-db"
+      Engine: postgres
+      EngineVersion: "15.4"
+      DBInstanceClass: !Ref DbInstanceClass
+      AllocatedStorage: !Ref DbAllocatedStorage
+      MasterUsername: !Sub ["{{resolve:secretsmanager:${SecretArn}:SecretString:username}}", { SecretArn: !Ref DbSecretArn }]
+      MasterUserPassword: !Sub ["{{resolve:secretsmanager:${SecretArn}:SecretString:password}}", { SecretArn: !Ref DbSecretArn }]
+      DBSubnetGroupName: !Ref DbSubnetGroup
+      VPCSecurityGroups:
+        - !ImportValue
+          Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-DbSecurityGroupId"
+      MultiAZ: false
+      StorageEncrypted: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-rds"
+        - Key: TenantId
+          Value: !Ref TenantId
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ApplicationId
+          Value: !Ref ApplicationId
+        - Key: ManagedBy
+          Value: CloudFormation
+
+Outputs:
+  DbEndpoint:
+    Description: RDS endpoint hostname
+    Value: !GetAtt DbInstance.Endpoint.Address
+    Export:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-DbEndpoint"
+  DbPort:
+    Description: RDS port
+    Value: !GetAtt DbInstance.Endpoint.Port
+    Export:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-DbPort"

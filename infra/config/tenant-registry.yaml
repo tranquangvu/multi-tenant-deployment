@@ -1,0 +1,41 @@
+# Tenant registry — base + silo tenants, each with stage and prod environments
+# Used by pipelines to resolve AWS account, region, and promotion targets
+version: "1.0"
+updated_at: "2025-03-04"
+
+tenants:
+  base:
+    id: base
+    name: Base
+    type: base
+    enabled: true
+    region: us-east-1
+    aws_account_id: "111111111111"
+    status: active
+    description: First deployment target; validation environment.
+    environments: [stage, prod]
+
+  abc:
+    id: abc
+    name: ABC
+    type: silo
+    enabled: true
+    region: us-east-1
+    aws_account_id: "222222222222"
+    status: active
+    description: Silo tenant ABC.
+    environments: [stage, prod]
+
+  xyz:
+    id: xyz
+    name: XYZ
+    type: silo
+    enabled: true
+    region: us-east-1
+    aws_account_id: "333333333333"
+    status: active
+    description: Silo tenant XYZ.
+    environments: [stage, prod]
+
+# Per-tenant, per-environment deployment is driven by (tenant_id, environment)
+# Pipeline deploys to base (stage then prod or selected env), then promotes to selected tenants (stage and/or prod)

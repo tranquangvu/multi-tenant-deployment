@@ -1,0 +1,70 @@
+# Copy this file to the root of your INFRASTRUCTURE repo as bitbucket-pipelines.yml
+# Multi-tenant infrastructure — CloudFormation for base + tenants, stage + prod, 2 apps per tenant.
+
+image: atlassian/default-image:3
+
+definitions:
+  steps:
+    - step: &deploy-tenant-env
+        name: Deploy tenant environment
+        script:
+          - chmod +x ./scripts/*.sh
+          - ./scripts/deploy-tenant-env.sh "${DEPLOY_TENANT_ID}" "${DEPLOY_ENVIRONMENT}"
+
+pipelines:
+  branches:
+    main:
+      - step:
+          name: Deploy Base Stage
+          deployment: base-stage
+          script:
+            - chmod +x ./scripts/*.sh
+            - ./scripts/deploy-tenant-env.sh base stage
+      - step:
+          name: Deploy Base Prod
+          deployment: base-prod
+          trigger: manual
+          script:
+            - chmod +x ./scripts/*.sh
+            - ./scripts/deploy-tenant-env.sh base prod
+
+  custom:
+    deploy-tenant:
+      - variables:
+          - name: DEPLOY_TENANT_ID
+            default: base
+          - name: DEPLOY_ENVIRONMENT
+            default: stage
+      - step:
+          name: Deploy to $DEPLOY_TENANT_ID / $DEPLOY_ENVIRONMENT
+          script:
+            - chmod +x ./scripts/*.sh
+            - ./scripts/deploy-tenant-env.sh "$DEPLOY_TENANT_ID" "$DEPLOY_ENVIRONMENT"
+
+    promote-tenants:
+      - variables:
+          - name: PROMOTE_TENANTS
+            default: ""
+          - name: PROMOTE_ENVS
+            default: "stage,prod"
+      - step:
+          name: Promote to selected tenants
+          trigger: manual
+          script:
+            - chmod +x ./scripts/*.sh
+            - |
+              if [[ -z "$PROMOTE_TENANTS" ]]; then
+                echo "Set PROMOTE_TENANTS (e.g. abc,xyz or 'all')"
+                exit 1
+              fi
+              TENANTS="$PROMOTE_TENANTS"
+              [[ "$PROMOTE_TENANTS" == "all" ]] && TENANTS="abc,xyz"
+              IFS=',' read -ra TARR <<< "$TENANTS"
+              IFS=',' read -ra EARR <<< "$PROMOTE_ENVS"
+              for t in "${TARR[@]}"; do
+                for e in "${EARR[@]}"; do
+                  echo "Deploying $t $e..."
+                  ./scripts/deploy-tenant-env.sh "$t" "$e" || { echo "Failed $t $e"; exit 1; }
+                done
+              done
+              echo "Promotion complete."
