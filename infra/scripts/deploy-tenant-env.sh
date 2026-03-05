@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Deploy all stacks for a (tenant, environment). Order: network -> security -> secrets (app1, app2) -> compute-cluster -> data-app (app1, app2) -> compute-app (app1, app2).
+# Deploy all modules for a (tenant, environment).
+# Order: network -> security -> secrets -> ecr -> ecs-cluster -> rds -> alb -> ecs-service (per app).
 # Usage: ./deploy-tenant-env.sh <tenant-id> <environment> [params-dir]
 # Example: ./deploy-tenant-env.sh base stage
 set -euo pipefail
@@ -8,7 +9,6 @@ TENANT_ID="${1:?Tenant ID required (base|abc|xyz)}"
 ENV="${2:?Environment required (stage|prod)}"
 PARAMS_DIR="${3:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PREFIX="${STACK_PREFIX:-mt}"
 
 if [[ -z "$PARAMS_DIR" ]]; then
@@ -41,7 +41,7 @@ deploy_stack() {
 # 1. Network
 deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-network" "network.yaml" "$BASE_PARAMS"
 
-# 2. Security (optional Bitbucket params via env or same file; add to base params if needed)
+# 2. Security
 deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-security" "security.yaml" "$BASE_PARAMS"
 
 # 3. Secrets per app (app1, app2)
@@ -54,32 +54,61 @@ for app in app1 app2; do
   deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-secrets-${app}" "secrets.yaml" "$PARAMS_APP"
 done
 
-# 4. Compute cluster (shared by app1, app2)
-deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-compute-cluster" "compute-cluster.yaml" "$BASE_PARAMS"
+# 4. ECR per app
+for app in app1 app2; do
+  PARAMS_APP="/tmp/${TENANT_ID}-${ENV}-ecr-${app}-params.json"
+  jq --arg app "$app" '. + [{"ParameterKey": "ApplicationId", "ParameterValue": $app}]' "$BASE_PARAMS" > "$PARAMS_APP"
+  deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-ecr-${app}" "ecr.yaml" "$PARAMS_APP"
+done
 
-# 5. Data (RDS) per app - need DbSecretArn from secrets stack
+# 5. ECS cluster
+deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-ecs-cluster" "ecs-cluster.yaml" "$BASE_PARAMS"
+
+# 6. RDS per app
 for app in app1 app2; do
   DB_SECRET_ARN=$(aws cloudformation describe-stacks \
     --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-secrets-${app}" \
     --query "Stacks[0].Outputs[?OutputKey=='DbSecretArn'].OutputValue | [0]" \
     --output text)
-  PARAMS_DATA="/tmp/${TENANT_ID}-${ENV}-data-${app}-params.json"
+  PARAMS_DATA="/tmp/${TENANT_ID}-${ENV}-rds-${app}-params.json"
   jq --arg app "$app" --arg arn "$DB_SECRET_ARN" \
     '. + [
       {"ParameterKey": "ApplicationId", "ParameterValue": $app},
       {"ParameterKey": "DbSecretArn", "ParameterValue": $arn}
     ]' "$BASE_PARAMS" > "$PARAMS_DATA"
-  deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-data-${app}" "data-app.yaml" "$PARAMS_DATA"
+  deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-rds-${app}" "rds.yaml" "$PARAMS_DATA"
 done
 
-# 6. Compute (ECS service) per app
+# 7. ALB
+deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-alb" "alb.yaml" "$BASE_PARAMS"
+
+# 8. ECS service per app (with ECR URI and target group)
 for app in app1 app2; do
-  PARAMS_APP="$PARAMS_DIR/${TENANT_ID}-${ENV}-params-${app}.json"
-  if [[ ! -f "$PARAMS_APP" ]]; then
-    PARAMS_APP="/tmp/${TENANT_ID}-${ENV}-compute-${app}-params.json"
-    jq --arg app "$app" '. + [{"ParameterKey": "ApplicationId", "ParameterValue": $app}]' "$BASE_PARAMS" > "$PARAMS_APP"
+  ECR_URI=$(aws cloudformation describe-stacks \
+    --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-ecr-${app}" \
+    --query "Stacks[0].Outputs[?OutputKey=='EcrRepoUri'].OutputValue | [0]" \
+    --output text)
+  if [[ "$app" == "app1" ]]; then
+    TG_KEY="TargetGroupApp1Arn"
+  else
+    TG_KEY="TargetGroupApp2Arn"
   fi
-  deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-compute-${app}" "compute-app.yaml" "$PARAMS_APP"
+  TG_ARN=$(aws cloudformation describe-stacks \
+    --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-alb" \
+    --query "Stacks[0].Outputs[?OutputKey=='${TG_KEY}'].OutputValue | [0]" \
+    --output text)
+  PARAMS_ECS="/tmp/${TENANT_ID}-${ENV}-ecs-${app}-params.json"
+  jq -n \
+    --arg app "$app" \
+    --arg uri "$ECR_URI" \
+    --arg tg "$TG_ARN" \
+    --slurpfile b "$BASE_PARAMS" \
+    '($b[0] // []) + [
+      {"ParameterKey": "ApplicationId", "ParameterValue": $app},
+      {"ParameterKey": "EcrRepoUri", "ParameterValue": $uri},
+      {"ParameterKey": "TargetGroupArn", "ParameterValue": $tg}
+    ]' > "$PARAMS_ECS"
+  deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-ecs-${app}" "ecs-service.yaml" "$PARAMS_ECS"
 done
 
 echo "All stacks for ${TENANT_ID}-${ENV} deployed successfully."

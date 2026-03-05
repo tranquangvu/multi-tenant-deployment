@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Multi-tenant network layer - VPC, subnets, NAT, IGW. One per (TenantId, Environment)."
+Description: "Module: Network - VPC, subnets, NAT, IGW. One per (TenantId, Environment)."
 
 Parameters:
   TenantId:

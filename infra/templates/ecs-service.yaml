@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Multi-tenant compute layer - ECS Fargate cluster and service per app. One stack per (TenantId, Environment, ApplicationId)."
+Description: "Module: ECS service - Fargate service and task definition per app. One per (TenantId, Environment, ApplicationId)."
 
 Parameters:
   TenantId:
@@ -16,10 +16,13 @@ Parameters:
     Type: String
     Default: mt
     Description: Prefix for stack and resource names
-  AppImageUri:
+  EcrRepoUri:
+    Type: String
+    Description: ECR repository URI (from ecr module output). Image will use :latest.
+  TargetGroupArn:
     Type: String
     Default: ""
-    Description: "(Optional) ECR image URI for the app. Leave empty for placeholder."
+    Description: "(Optional) ALB target group ARN to attach this service to. Leave empty for no ALB."
   AppCpu:
     Type: String
     Default: "256"
@@ -35,24 +38,10 @@ Parameters:
     MaxValue: 10
     Description: Desired number of tasks
 
-Resources:
-  EcrRepo:
-    Type: AWS::ECR::Repository
-    Properties:
-      RepositoryName: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}"
-      LifecyclePolicy:
-        LifecyclePolicyText: |
-          {"rules":[{"rulePriority":1,"description":"Keep last 5 images","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":5},"action":{"type":"expire"}}]}
-      Tags:
-        - Key: TenantId
-          Value: !Ref TenantId
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: ApplicationId
-          Value: !Ref ApplicationId
-        - Key: ManagedBy
-          Value: CloudFormation
+Conditions:
+  HasTargetGroup: !Not [!Equals [!Ref TargetGroupArn, ""]]
 
+Resources:
   TaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -118,12 +107,7 @@ Resources:
       TaskRoleArn: !GetAtt TaskRole.Arn
       ContainerDefinitions:
         - Name: !Ref ApplicationId
-          Image:
-            !If [
-              HasImage,
-              !Ref AppImageUri,
-              !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}:latest",
-            ]
+          Image: !Sub "${EcrRepoUri}:latest"
           Essential: true
           LogConfiguration:
             LogDriver: awslogs
@@ -150,6 +134,7 @@ Resources:
       TaskDefinition: !Ref TaskDefinition
       DesiredCount: !Ref DesiredCount
       LaunchType: FARGATE
+      PlatformVersion: LATEST
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: DISABLED
@@ -161,16 +146,14 @@ Resources:
           SecurityGroups:
             - !ImportValue
               Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-AppSecurityGroupId"
-
-Conditions:
-  HasImage: !Not [!Equals [!Ref AppImageUri, ""]]
+      LoadBalancers: !If
+        - HasTargetGroup
+        - - TargetGroupArn: !Ref TargetGroupArn
+            ContainerName: !Ref ApplicationId
+            ContainerPort: 8080
+        - !Ref "AWS::NoValue"
 
 Outputs:
-  EcrRepoUri:
-    Description: ECR repository URI for this app
-    Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}"
-    Export:
-      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-EcrRepoUri"
   ServiceName:
     Description: ECS service name
     Value: !GetAtt Service.Name

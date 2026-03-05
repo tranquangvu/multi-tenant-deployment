@@ -5,18 +5,38 @@ This directory contains AWS CloudFormation templates and scripts for the multi-t
 ## Structure
 
 - **`config/`** — Tenant and app registry (YAML)
-- **`templates/`** — CloudFormation: network, security, secrets, data-app, compute-cluster, compute-app
-- **`tenants/<id>/`** — Parameter files per tenant: `tenants/base/` (`base-stage-params.json`, `base-prod-params.json`), `tenants/abc/` (`stage-params.json`, `prod-params.json`), `tenants/xyz/` (same)
+- **`templates/`** — CloudFormation templates by AWS service:
+  - **network** — VPC, subnets, NAT, IGW
+  - **security** — Security groups, pipeline IAM role
+  - **secrets** — Secrets Manager per app
+  - **ecr** — ECR repository per app
+  - **rds** — RDS PostgreSQL per app
+  - **alb** — Application Load Balancer + target groups (app1, app2)
+  - **ecs-cluster** — ECS cluster (shared by app1 and app2)
+  - **ecs-service** — ECS Fargate service + task definition per app
+- **`tenants/<id>/`** — Parameter files per tenant: `tenants/base/`, `tenants/abc/`, `tenants/xyz/`
 - **`scripts/`** — `deploy-stack.sh`, `deploy-tenant-env.sh`
 
-## Stack order (per tenant + environment)
+## How all modules are used in each tenant
 
-1. **network** — VPC, subnets, NAT, IGW  
-2. **security** — Security groups, pipeline IAM role  
-3. **secrets-app1** / **secrets-app2** — Secrets Manager placeholders per app  
-4. **compute-cluster** — ECS cluster (shared by app1 and app2)  
-5. **data-app1** / **data-app2** — RDS PostgreSQL per app  
-6. **compute-app1** / **compute-app2** — ECS Fargate service per app  
+**Every (tenant, environment)** gets the **full set** of modules. One run of `deploy-tenant-env.sh <tenant-id> <environment>` deploys all of these stacks for that tenant + env:
+
+| Module      | Stacks per (tenant, env) | Description                  |
+| ----------- | ------------------------ | ---------------------------- |
+| network     | 1                        | VPC, subnets, NAT, IGW       |
+| security    | 1                        | App SG, DB SG, pipeline role |
+| secrets     | 2 (app1, app2)           | Secrets Manager per app      |
+| ecr         | 2 (app1, app2)           | ECR repo per app             |
+| ecs-cluster | 1                        | ECS cluster (shared)         |
+| rds         | 2 (app1, app2)           | RDS PostgreSQL per app       |
+| alb         | 1                        | ALB + 2 target groups        |
+| ecs-service | 2 (app1, app2)           | Fargate service per app      |
+
+**Example:** For `base` + `stage` you get e.g. `mt-base-stage-network`, `mt-base-stage-security`, `mt-base-stage-secrets-app1`, `mt-base-stage-secrets-app2`, … through to `mt-base-stage-ecs-app2`. Same list is created for `base`+`prod`, `abc`+`stage`, `abc`+`prod`, `xyz`+`stage`, `xyz`+`prod` (each tenant has its own params under `tenants/<id>/`).
+
+## Deploy order (per tenant + environment)
+
+1. **network** → **security** → **secrets** (app1, app2) → **ecr** (app1, app2) → **ecs-cluster** → **rds** (app1, app2) → **alb** → **ecs-service** (app1, app2)
 
 ## Deploy one (tenant, environment)
 
@@ -28,17 +48,32 @@ export AWS_PROFILE=your-profile   # or use env vars AWS_ACCESS_KEY_ID / AWS_SECR
 ./scripts/deploy-tenant-env.sh abc prod
 ```
 
+## Deploy all tenants (all modules in each)
+
+To run **all modules** for **every tenant and environment** (base, abc, xyz × stage, prod):
+
+```bash
+./scripts/deploy-all-tenants.sh
+```
+
+Optional: limit to specific tenants or envs:
+
+```bash
+DEPLOY_TENANTS="base abc" DEPLOY_ENVS="stage" ./scripts/deploy-all-tenants.sh   # base+abc, stage only
+DEPLOY_ENVS="prod" ./scripts/deploy-all-tenants.sh                              # all tenants, prod only
+```
+
 ## Stack naming
 
-- Pattern: `{prefix}-{tenant-id}-{environment}-{layer}`  
-- Example: `mt-base-stage-network`, `mt-abc-prod-compute-app1`  
+- Pattern: `{prefix}-{tenant-id}-{environment}-{layer}`
+- Example: `mt-base-stage-network`, `mt-abc-prod-ecs-app1`, `mt-base-stage-alb`
 - Prefix default: `mt` (override with `STACK_PREFIX`).
 
 ## Bitbucket (infra repo)
 
 Use **`bitbucket-pipelines.yml`** in this repo (or copy from `../pipelines/bitbucket-pipelines-infra.yml`). Configure repository variables:
 
-- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`  
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`
 - For multi-account: use one pipeline per account or assume role per tenant (see docs).
 
 ## Multi-account

@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Multi-tenant security layer - Security groups, IAM roles for pipeline and app. One per (TenantId, Environment)."
+Description: "Module: Security - Security groups, IAM pipeline role. One per (TenantId, Environment)."
 
 Parameters:
   TenantId:
@@ -16,15 +16,12 @@ Parameters:
   BitbucketOidcAudience:
     Type: String
     Default: pip
-    Description: Bitbucket OIDC audience (pip for Pipelines)
   BitbucketWorkspace:
     Type: String
     Default: my-workspace
-    Description: Bitbucket workspace/owner
   BitbucketRepo:
     Type: String
     Default: "*"
-    Description: Bitbucket repo slug or * for all
 
 Resources:
   VpcIdImport:
@@ -40,7 +37,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: !Sub "${StackPrefix}-${TenantId}-${Environment}-app-sg"
-      GroupDescription: Security group for app compute (ECS/Lambda)
+      GroupDescription: Security group for app compute (ECS/ALB)
       VpcId: !ImportValue
         Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-VpcId"
       Tags:

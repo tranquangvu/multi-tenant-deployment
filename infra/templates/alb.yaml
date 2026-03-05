@@ -1,0 +1,154 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Module: ALB - Application Load Balancer and target groups per app. One per (TenantId, Environment)."
+
+Parameters:
+  TenantId:
+    Type: String
+    Description: Tenant identifier (base, abc, xyz, ...)
+  Environment:
+    Type: String
+    AllowedValues: [stage, prod]
+    Description: Environment (stage or prod)
+  StackPrefix:
+    Type: String
+    Default: mt
+    Description: Prefix for stack and resource names
+
+Resources:
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${StackPrefix}-${TenantId}-${Environment}-alb-sg"
+      GroupDescription: Security group for ALB
+      VpcId: !ImportValue
+        Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-VpcId"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTP
+      Tags:
+        - Key: Name
+          Value: !Sub "${StackPrefix}-${TenantId}-${Environment}-alb-sg"
+        - Key: TenantId
+          Value: !Ref TenantId
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  Alb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-alb"
+      Type: application
+      Scheme: internet-facing
+      Subnets:
+        - !ImportValue
+          Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-PublicSubnet1Id"
+        - !ImportValue
+          Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-PublicSubnet2Id"
+      SecurityGroups: [!Ref AlbSecurityGroup]
+      Tags:
+        - Key: Name
+          Value: !Sub "${StackPrefix}-${TenantId}-${Environment}-alb"
+        - Key: TenantId
+          Value: !Ref TenantId
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  TargetGroupApp1:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-tg-app1"
+      Port: 8080
+      Protocol: HTTP
+      VpcId: !ImportValue
+        Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-VpcId"
+      TargetType: ip
+      HealthCheckEnabled: true
+      HealthCheckPath: /health
+      HealthCheckProtocol: HTTP
+      Tags:
+        - Key: TenantId
+          Value: !Ref TenantId
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ApplicationId
+          Value: app1
+
+  TargetGroupApp2:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-tg-app2"
+      Port: 8080
+      Protocol: HTTP
+      VpcId: !ImportValue
+        Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-VpcId"
+      TargetType: ip
+      HealthCheckEnabled: true
+      HealthCheckPath: /health
+      HealthCheckProtocol: HTTP
+      Tags:
+        - Key: TenantId
+          Value: !Ref TenantId
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ApplicationId
+          Value: app2
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref Alb
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupApp1
+          Order: 1
+
+  ListenerRuleApp2:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref Listener
+      Priority: 10
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig:
+            Values:
+              - "/app2/*"
+              - "/app2"
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupApp2
+
+Outputs:
+  AlbDnsName:
+    Description: ALB DNS name
+    Value: !GetAtt Alb.DNSName
+    Export:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-AlbDnsName"
+  AlbArn:
+    Description: ALB ARN
+    Value: !Ref Alb
+    Export:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-AlbArn"
+  ListenerArn:
+    Description: Listener ARN
+    Value: !Ref Listener
+    Export:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-ListenerArn"
+  TargetGroupApp1Arn:
+    Description: Target group ARN for app1
+    Value: !Ref TargetGroupApp1
+    Export:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-TargetGroupApp1Arn"
+  TargetGroupApp2Arn:
+    Description: Target group ARN for app2
+    Value: !Ref TargetGroupApp2
+    Export:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-TargetGroupApp2Arn"

@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Multi-tenant data layer - RDS PostgreSQL per app. One stack per (TenantId, Environment, ApplicationId)."
+Description: "Module: RDS - PostgreSQL per app. One per (TenantId, Environment, ApplicationId)."
 
 Parameters:
   TenantId:
@@ -32,7 +32,7 @@ Parameters:
     Description: Allocated storage (GB)
   DbSecretArn:
     Type: String
-    Description: ARN of the DB secret (from secrets stack for this app). RDS will use username/password from this secret.
+    Description: ARN of the DB secret (from secrets module for this app)
 
 Resources:
   DbSubnetGroup:
@@ -63,8 +63,16 @@ Resources:
       EngineVersion: "15.4"
       DBInstanceClass: !Ref DbInstanceClass
       AllocatedStorage: !Ref DbAllocatedStorage
-      MasterUsername: !Sub ["{{resolve:secretsmanager:${SecretArn}:SecretString:username}}", { SecretArn: !Ref DbSecretArn }]
-      MasterUserPassword: !Sub ["{{resolve:secretsmanager:${SecretArn}:SecretString:password}}", { SecretArn: !Ref DbSecretArn }]
+      MasterUsername:
+        !Sub [
+          "{{resolve:secretsmanager:${SecretArn}:SecretString:username}}",
+          { SecretArn: !Ref DbSecretArn },
+        ]
+      MasterUserPassword:
+        !Sub [
+          "{{resolve:secretsmanager:${SecretArn}:SecretString:password}}",
+          { SecretArn: !Ref DbSecretArn },
+        ]
       DBSubnetGroupName: !Ref DbSubnetGroup
       VPCSecurityGroups:
         - !ImportValue
