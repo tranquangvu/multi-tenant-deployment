@@ -1,5 +1,5 @@
 # Copy this file to the root of your INFRASTRUCTURE repo as bitbucket-pipelines.yml
-# Multi-tenant infrastructure — CloudFormation for base + tenants, stage + prod, 2 apps per tenant.
+# Multi-tenant infrastructure — Base has stage + prod; other tenants have prod only. 2 apps per tenant.
 
 image: atlassian/default-image:3
 
@@ -46,7 +46,7 @@ pipelines:
           - name: PROMOTE_TENANTS
             default: ""
           - name: PROMOTE_ENVS
-            default: "stage,prod"
+            default: "prod"
       - step:
           name: Promote to selected tenants
           trigger: manual

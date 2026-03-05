@@ -2,7 +2,8 @@
 # Deploy all modules for a (tenant, environment).
 # Order: network -> security -> secrets -> ecr -> ecs-cluster -> rds -> alb -> ecs-service (per app).
 # Usage: ./deploy-tenant-env.sh <tenant-id> <environment> [params-dir]
-# Example: ./deploy-tenant-env.sh base stage
+# Base: stage or prod. Other tenants (abc, xyz): prod only.
+# Example: ./deploy-tenant-env.sh base stage  |  ./deploy-tenant-env.sh abc prod
 set -euo pipefail
 
 TENANT_ID="${1:?Tenant ID required (base|abc|xyz)}"
@@ -10,6 +11,12 @@ ENV="${2:?Environment required (stage|prod)}"
 PARAMS_DIR="${3:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PREFIX="${STACK_PREFIX:-mt}"
+
+# Only base has stage; all other tenants (abc, xyz) have prod only
+if [[ "$TENANT_ID" != "base" && "$ENV" == "stage" ]]; then
+  echo "Only base tenant has a stage environment. Use prod for ${TENANT_ID}." >&2
+  exit 1
+fi
 
 if [[ -z "$PARAMS_DIR" ]]; then
   PARAMS_DIR="$SCRIPT_DIR/../tenants/${TENANT_ID}"

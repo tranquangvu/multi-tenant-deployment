@@ -1,6 +1,6 @@
 # Multi-Tenant Infrastructure (AWS CloudFormation)
 
-This directory contains AWS CloudFormation templates and scripts for the multi-tenant deployment framework: **2 applications (app1, app2)** per tenant and **stage + prod** per tenant.
+This directory contains AWS CloudFormation templates and scripts for the multi-tenant deployment framework: **2 applications (app1, app2)** per tenant. **Only base has stage + prod**; all other tenants (abc, xyz) have **production only**.
 
 ## Structure
 
@@ -32,7 +32,7 @@ This directory contains AWS CloudFormation templates and scripts for the multi-t
 | alb         | 1                        | ALB + 2 target groups        |
 | ecs-service | 2 (app1, app2)           | Fargate service per app      |
 
-**Example:** For `base` + `stage` you get e.g. `mt-base-stage-network`, `mt-base-stage-security`, `mt-base-stage-secrets-app1`, `mt-base-stage-secrets-app2`, … through to `mt-base-stage-ecs-app2`. Same list is created for `base`+`prod`, `abc`+`stage`, `abc`+`prod`, `xyz`+`stage`, `xyz`+`prod` (each tenant has its own params under `tenants/<id>/`).
+**Example:** For `base` + `stage` you get e.g. `mt-base-stage-network`, … `mt-base-stage-ecs-app2`. Same stack set for `base`+`prod`. For `abc` and `xyz` only **prod** exists: `mt-abc-prod-network`, … `mt-xyz-prod-ecs-app2` (each tenant has params under `tenants/<id>/`).
 
 ## Deploy order (per tenant + environment)
 
@@ -42,25 +42,26 @@ This directory contains AWS CloudFormation templates and scripts for the multi-t
 
 ```bash
 export AWS_PROFILE=your-profile   # or use env vars AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
+# Base: stage and prod
 ./scripts/deploy-tenant-env.sh base stage
 ./scripts/deploy-tenant-env.sh base prod
-./scripts/deploy-tenant-env.sh abc stage
+# Other tenants: prod only (deploying abc/xyz with stage will exit with an error)
 ./scripts/deploy-tenant-env.sh abc prod
+./scripts/deploy-tenant-env.sh xyz prod
 ```
 
 ## Deploy all tenants (all modules in each)
 
-To run **all modules** for **every tenant and environment** (base, abc, xyz × stage, prod):
+Runs **all modules** for each tenant. Base gets **stage** then **prod**; abc and xyz get **prod** only.
 
 ```bash
 ./scripts/deploy-all-tenants.sh
 ```
 
-Optional: limit to specific tenants or envs:
+Optional: limit to specific tenants:
 
 ```bash
-DEPLOY_TENANTS="base abc" DEPLOY_ENVS="stage" ./scripts/deploy-all-tenants.sh   # base+abc, stage only
-DEPLOY_ENVS="prod" ./scripts/deploy-all-tenants.sh                              # all tenants, prod only
+DEPLOY_TENANTS="base abc" ./scripts/deploy-all-tenants.sh   # base (stage+prod), abc (prod only)
 ```
 
 ## Stack naming

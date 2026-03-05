@@ -1,6 +1,6 @@
 # Copy this file to the root of your APPLICATION repo (app1 or app2) as bitbucket-pipelines.yml
 # Flow: Build -> Deploy to Base (stage/prod) -> Validate -> Manual Approval -> Promote to Tenants
-# Uses 2 apps (app1, app2); each tenant has stage + prod.
+# Base has stage + prod; other tenants (abc, xyz) have prod only.
 
 image: atlassian/default-image:3
 
@@ -64,7 +64,7 @@ definitions:
           - export IMAGE_TAG=${BITBUCKET_COMMIT:0:7}
           - |
             PROMOTE_TENANTS="${PROMOTE_TENANTS:-}"
-            PROMOTE_ENVS="${PROMOTE_ENVS:-stage,prod}"
+            PROMOTE_ENVS="${PROMOTE_ENVS:-prod}"
             if [[ -z "$PROMOTE_TENANTS" ]]; then
               echo "Set pipeline variable PROMOTE_TENANTS (e.g. abc,xyz or 'all')"
               exit 1
@@ -114,5 +114,5 @@ pipelines:
           - name: PROMOTE_TENANTS
             default: ""
           - name: PROMOTE_ENVS
-            default: "stage,prod"
+            default: "prod"
       - step: *promote

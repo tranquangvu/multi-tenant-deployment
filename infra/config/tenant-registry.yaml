@@ -1,7 +1,7 @@
-# Tenant registry — base + silo tenants, each with stage and prod environments
+# Tenant registry — base has stage + prod; other tenants have prod only
 # Used by pipelines to resolve AWS account, region, and promotion targets
 version: "1.0"
-updated_at: "2025-03-04"
+updated_at: "2025-03-05"
 
 tenants:
   base:
@@ -24,7 +24,7 @@ tenants:
     aws_account_id: "222222222222"
     status: active
     description: Silo tenant ABC.
-    environments: [stage, prod]
+    environments: [prod]
 
   xyz:
     id: xyz
@@ -35,7 +35,7 @@ tenants:
     aws_account_id: "333333333333"
     status: active
     description: Silo tenant XYZ.
-    environments: [stage, prod]
+    environments: [prod]
 
-# Per-tenant, per-environment deployment is driven by (tenant_id, environment)
-# Pipeline deploys to base (stage then prod or selected env), then promotes to selected tenants (stage and/or prod)
+# Only base has stage + prod; all other tenants have production only.
+# Pipeline: deploy to base (stage then prod), then promote to selected tenants (prod only).

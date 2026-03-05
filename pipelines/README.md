@@ -1,7 +1,7 @@
 # Bitbucket Pipelines — Multi-Tenant
 
 Two pipeline definitions: **infrastructure repo** and **application repo(s)**.  
-Assumes **2 apps (app1, app2)** and **stage + prod** per tenant.
+Assumes **2 apps (app1, app2)**. **Base** has stage + prod; **other tenants** have prod only.
 
 ## Infrastructure repo
 
@@ -31,5 +31,5 @@ Assumes **2 apps (app1, app2)** and **stage + prod** per tenant.
 
 ## Promotion
 
-- **Infra:** Use custom pipeline `promote-tenants` with `PROMOTE_TENANTS=abc,xyz` or `all`, and `PROMOTE_ENVS=stage,prod`.  
+- **Infra:** Use custom pipeline `promote-tenants` with `PROMOTE_TENANTS=abc,xyz` or `all`, and `PROMOTE_ENVS=prod` (other tenants are prod only).  
 - **Apps:** After approval on main, run the “Promote to Tenants” step and set `PROMOTE_TENANTS` and `PROMOTE_ENVS` (or use custom `promote` pipeline).

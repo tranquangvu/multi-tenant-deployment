@@ -1,6 +1,6 @@
 # Bitbucket Pipelines — Infrastructure repo (multi-tenant CloudFormation)
 # Deploys to base (stage/prod) first; then optional promotion to selected tenants.
-# Uses 2 apps per tenant and stage + prod per tenant.
+# Base has stage + prod; other tenants (abc, xyz) have prod only.
 
 image: atlassian/default-image:3
 
@@ -44,7 +44,7 @@ pipelines:
             - ./scripts/deploy-tenant-env.sh base prod
 
   custom:
-    # Deploy single (tenant, environment) — e.g. DEPLOY_TENANT_ID=abc DEPLOY_ENVIRONMENT=stage
+    # Deploy single (tenant, environment). Base: stage or prod; others: prod only
     deploy-tenant:
       - variables:
           - name: DEPLOY_TENANT_ID
@@ -57,13 +57,13 @@ pipelines:
             - chmod +x ./scripts/*.sh
             - ./scripts/deploy-tenant-env.sh "$DEPLOY_TENANT_ID" "$DEPLOY_ENVIRONMENT"
 
-    # Promote to multiple tenants (stage and/or prod). Set PROMOTE_TENANTS=abc,xyz and PROMOTE_ENVS=stage,prod
+    # Promote to multiple tenants (prod only for abc/xyz). Set PROMOTE_TENANTS=abc,xyz and PROMOTE_ENVS=prod
     promote-tenants:
       - variables:
           - name: PROMOTE_TENANTS
             default: ""
           - name: PROMOTE_ENVS
-            default: "stage,prod"
+            default: "prod"
       - step:
           name: Promote to selected tenants
           trigger: manual
