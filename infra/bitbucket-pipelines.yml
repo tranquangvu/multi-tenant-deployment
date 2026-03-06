@@ -1,7 +1,8 @@
 # Bitbucket Pipelines — Infrastructure repo (multi-tenant CloudFormation)
 # 1) Upload templates to S3  2) Deploy root stack (main.yaml) per tenant/env.
 # Base has stage + prod; other tenants (abc, xyz) have production only.
-# Repo variables: AWS_*, TEMPLATES_S3_BUCKET
+# OIDC: set AWS_ROLE_ARN in each deployment environment (and repo var for upload-templates).
+# Repo variables: TEMPLATES_S3_BUCKET, AWS_ROLE_ARN (for upload-templates).
 
 image: atlassian/default-image:3
 
@@ -9,6 +10,7 @@ definitions:
   steps:
     - step: &upload-templates
         name: Upload templates to S3
+        oidc: true
         script:
           - chmod +x ./scripts/*.sh
           - |
@@ -16,14 +18,23 @@ definitions:
               echo "Set repository variable TEMPLATES_S3_BUCKET"
               exit 1
             fi
+            if [[ -z "${AWS_ROLE_ARN}" ]]; then
+              echo "Set repository variable AWS_ROLE_ARN for OIDC"
+              exit 1
+            fi
+            export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
+            echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
             export TEMPLATES_S3_PREFIX="${TEMPLATES_S3_PREFIX:-cfn/templates}"
             ./scripts/upload-templates-to-s3.sh
 
     - step: &deploy-main-base-stage
         name: Deploy Base Stage (root stack)
         deployment: base-stage
+        oidc: true
         script:
           - chmod +x ./scripts/*.sh
+          - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
+          - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
           - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET}"
           - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
           - export AWS_REGION="$AWS_DEFAULT_REGION"
@@ -34,8 +45,11 @@ definitions:
         name: Deploy Base Production (root stack)
         deployment: base-prod
         trigger: manual
+        oidc: true
         script:
           - chmod +x ./scripts/*.sh
+          - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
+          - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
           - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET}"
           - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
           - export AWS_REGION="$AWS_DEFAULT_REGION"
@@ -54,6 +68,7 @@ pipelines:
       - step: *upload-templates
 
     # Deploy root stack for one (tenant, environment). Base: stage or production; others: production only.
+    # Set AWS_ROLE_ARN in repo vars or use a deployment env that matches the tenant/env.
     deploy-tenant:
       - variables:
           - name: DEPLOY_TENANT_ID
@@ -62,8 +77,11 @@ pipelines:
             default: stage
       - step:
           name: Upload templates then deploy $DEPLOY_TENANT_ID / $DEPLOY_ENVIRONMENT
+          oidc: true
           script:
             - chmod +x ./scripts/*.sh
+            - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
+            - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
             - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET}"
             - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh $DEPLOY_TENANT_ID)"
             - export AWS_REGION="$AWS_DEFAULT_REGION"
@@ -75,6 +93,7 @@ pipelines:
               ./scripts/deploy-stack.sh "mt-${DEPLOY_TENANT_ID}-${CFN_ENV}-main" "tenants/${DEPLOY_TENANT_ID}/${ENV_NAME}/main.yaml" "tenants/${DEPLOY_TENANT_ID}/${ENV_NAME}/params.json"
 
     # Promote to multiple tenants (production only for abc/xyz)
+    # Set AWS_ROLE_ARN (e.g. a role that can assume per-tenant roles, or one role per tenant via deployment).
     promote-tenants:
       - variables:
           - name: PROMOTE_TENANTS
@@ -82,8 +101,11 @@ pipelines:
       - step:
           name: Upload templates then promote to tenants
           trigger: manual
+          oidc: true
           script:
             - chmod +x ./scripts/*.sh
+            - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
+            - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
             - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET}"
             - ./scripts/upload-templates-to-s3.sh
             - |
