@@ -33,6 +33,16 @@ Parameters:
   BitbucketRepo:
     Type: String
     Default: "*"
+  FooAppDesiredCount:
+    Type: Number
+    Default: 1
+    MinValue: 0
+    Description: Desired number of tasks for Foo App (set to 0 for initial deploy)
+  BazAppDesiredCount:
+    Type: Number
+    Default: 1
+    MinValue: 0
+    Description: Desired number of tasks for Baz App (set to 0 for initial deploy)
 
 Resources:
   NetworkStack:
@@ -161,6 +171,7 @@ Resources:
         ApplicationId: foo
         EcrRepoUri: !GetAtt EcrFooAppStack.Outputs.EcrRepoUri
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupFooAppArn
+        DesiredCount: !Ref FooAppDesiredCount
 
   EcsBazAppStack:
     Type: AWS::CloudFormation::Stack
@@ -177,6 +188,7 @@ Resources:
         ApplicationId: baz
         EcrRepoUri: !GetAtt EcrBazAppStack.Outputs.EcrRepoUri
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazAppArn
+        DesiredCount: !Ref BazAppDesiredCount
 
 Outputs:
   NetworkStackId:
