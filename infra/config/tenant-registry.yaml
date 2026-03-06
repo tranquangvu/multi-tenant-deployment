@@ -9,7 +9,7 @@
 tenants:
   base:
     name: Base
-    region: us-east-1
+    region: ap-southeast-1
     environments: [stage, prod]
     # Future (Landing Zone): account per environment
     # accounts:
@@ -19,7 +19,7 @@ tenants:
 
   abc:
     name: ABC
-    region: us-east-1
+    region: ap-southeast-1
     environments: [prod]
     # accounts:
     #   prod: "333333333333"
@@ -27,7 +27,7 @@ tenants:
 
   xyz:
     name: XYZ
-    region: us-east-1
+    region: ap-southeast-1
     environments: [prod]
     # accounts:
     #   prod: "444444444444"

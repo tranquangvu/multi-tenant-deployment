@@ -51,7 +51,7 @@ tenants:
     name: Foundation
     type: base
     enabled: true
-    region: us-east-1
+    region: ap-southeast-1
     aws_account_id: "111111111111"
     status: active
     description: First deployment target; validation environment.
@@ -61,7 +61,7 @@ tenants:
     name: Tenant A
     type: silo
     enabled: true
-    region: us-east-1
+    region: ap-southeast-1
     aws_account_id: "222222222222"
     status: active
     description: Production tenant A.
@@ -78,16 +78,16 @@ tenants:
 
 ### 2.2 Field Definitions
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | string | Unique tenant identifier; used in pipelines and CloudFormation parameters. |
-| `name` | string | Human-readable name. |
-| `type` | enum | `base` \| `silo`. |
-| `enabled` | boolean | If `false`, tenant is skipped for promotions. |
-| `region` | string | Primary AWS region for this tenant. |
-| `aws_account_id` | string | AWS account ID (for multi-account model). |
-| `status` | string | e.g. `active`, `maintenance`, `deprecated`. |
-| `description` | string | Optional notes. |
+| Field            | Type    | Description                                                                |
+| ---------------- | ------- | -------------------------------------------------------------------------- |
+| `id`             | string  | Unique tenant identifier; used in pipelines and CloudFormation parameters. |
+| `name`           | string  | Human-readable name.                                                       |
+| `type`           | enum    | `base` \| `silo`.                                                          |
+| `enabled`        | boolean | If `false`, tenant is skipped for promotions.                              |
+| `region`         | string  | Primary AWS region for this tenant.                                        |
+| `aws_account_id` | string  | AWS account ID (for multi-account model).                                  |
+| `status`         | string  | e.g. `active`, `maintenance`, `deprecated`.                                |
+| `description`    | string  | Optional notes.                                                            |
 
 Optional extensions (for promotion and versioning):
 
