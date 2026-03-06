@@ -1,0 +1,186 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Root stack - registers all module stacks via TemplateURL (S3). One per (tenant, environment)."
+# Deploy: upload templates to S3 first, then deploy this stack with params.json
+
+Parameters:
+  TenantId:
+    Type: String
+    Description: Tenant identifier (base, abc, xyz, ...)
+  Environment:
+    Type: String
+    AllowedValues: [stage, prod]
+    Description: Environment (stage or prod)
+  StackPrefix:
+    Type: String
+    Default: mt
+    Description: Prefix for stack and resource names
+  TemplatesS3Bucket:
+    Type: String
+    Description: S3 bucket where CloudFormation templates are uploaded
+  TemplatesS3Prefix:
+    Type: String
+    Default: cfn/templates
+    Description: S3 prefix (key prefix) for template files
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+  BitbucketOidcAudience:
+    Type: String
+    Default: pip
+  BitbucketWorkspace:
+    Type: String
+    Default: my-workspace
+  BitbucketRepo:
+    Type: String
+    Default: "*"
+
+Resources:
+  NetworkStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/network.yaml"
+      Parameters:
+        TenantId: !Ref TenantId
+        Environment: !Ref Environment
+        StackPrefix: !Ref StackPrefix
+        VpcCidr: !Ref VpcCidr
+
+  SecurityStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: NetworkStack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/security.yaml"
+      Parameters:
+        TenantId: !Ref TenantId
+        Environment: !Ref Environment
+        StackPrefix: !Ref StackPrefix
+        BitbucketOidcAudience: !Ref BitbucketOidcAudience
+        BitbucketWorkspace: !Ref BitbucketWorkspace
+        BitbucketRepo: !Ref BitbucketRepo
+
+  SecretsFooAppStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: SecurityStack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/secrets.yaml"
+      Parameters:
+        TenantId: !Ref TenantId
+        Environment: !Ref Environment
+        StackPrefix: !Ref StackPrefix
+        ApplicationId: foo
+
+  SecretsBazAppStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: SecurityStack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/secrets.yaml"
+      Parameters:
+        TenantId: !Ref TenantId
+        Environment: !Ref Environment
+        StackPrefix: !Ref StackPrefix
+        ApplicationId: baz
+
+  EcrFooAppStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: SecurityStack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecr.yaml"
+      Parameters:
+        TenantId: !Ref TenantId
+        Environment: !Ref Environment
+        StackPrefix: !Ref StackPrefix
+        ApplicationId: foo
+
+  EcrBazAppStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: SecurityStack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecr.yaml"
+      Parameters:
+        TenantId: !Ref TenantId
+        Environment: !Ref Environment
+        StackPrefix: !Ref StackPrefix
+        ApplicationId: baz
+
+  EcsClusterStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: SecurityStack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecs-cluster.yaml"
+      Parameters:
+        TenantId: !Ref TenantId
+        Environment: !Ref Environment
+        StackPrefix: !Ref StackPrefix
+
+  RdsFooAppStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: SecretsFooAppStack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/rds.yaml"
+      Parameters:
+        TenantId: !Ref TenantId
+        Environment: !Ref Environment
+        StackPrefix: !Ref StackPrefix
+        ApplicationId: foo
+        AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
+
+  RdsBazAppStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: SecretsBazAppStack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/rds.yaml"
+      Parameters:
+        TenantId: !Ref TenantId
+        Environment: !Ref Environment
+        StackPrefix: !Ref StackPrefix
+        ApplicationId: baz
+        AppSecretArn: !GetAtt SecretsBazAppStack.Outputs.AppSecretArn
+
+  AlbStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: SecurityStack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/alb.yaml"
+      Parameters:
+        TenantId: !Ref TenantId
+        Environment: !Ref Environment
+        StackPrefix: !Ref StackPrefix
+
+  EcsFooAppStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - EcrFooAppStack
+      - AlbStack
+      - EcsClusterStack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecs-service.yaml"
+      Parameters:
+        TenantId: !Ref TenantId
+        Environment: !Ref Environment
+        StackPrefix: !Ref StackPrefix
+        ApplicationId: foo
+        EcrRepoUri: !GetAtt EcrFooAppStack.Outputs.EcrRepoUri
+        TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupFooAppArn
+
+  EcsBazAppStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - EcrBazAppStack
+      - AlbStack
+      - EcsClusterStack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecs-service.yaml"
+      Parameters:
+        TenantId: !Ref TenantId
+        Environment: !Ref Environment
+        StackPrefix: !Ref StackPrefix
+        ApplicationId: baz
+        EcrRepoUri: !GetAtt EcrBazAppStack.Outputs.EcrRepoUri
+        TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazAppArn
+
+Outputs:
+  NetworkStackId:
+    Value: !Ref NetworkStack
+  AlbDnsName:
+    Value: !GetAtt AlbStack.Outputs.AlbDnsName
+    Description: ALB DNS name for this tenant/environment

@@ -11,7 +11,7 @@ Parameters:
     Description: Environment (stage or prod)
   ApplicationId:
     Type: String
-    Description: Application ID (app1, app2)
+    Description: Application ID (foo, baz)
   StackPrefix:
     Type: String
     Default: mt
@@ -30,9 +30,9 @@ Parameters:
     MinValue: 20
     MaxValue: 65536
     Description: Allocated storage (GB)
-  DbSecretArn:
+  AppSecretArn:
     Type: String
-    Description: ARN of the DB secret (from secrets module for this app)
+    Description: ARN of the app secret (from secrets module for this app)
 
 Resources:
   DbSubnetGroup:
@@ -66,12 +66,12 @@ Resources:
       MasterUsername:
         !Sub [
           "{{resolve:secretsmanager:${SecretArn}:SecretString:username}}",
-          { SecretArn: !Ref DbSecretArn },
+          { SecretArn: !Ref AppSecretArn },
         ]
       MasterUserPassword:
         !Sub [
           "{{resolve:secretsmanager:${SecretArn}:SecretString:password}}",
-          { SecretArn: !Ref DbSecretArn },
+          { SecretArn: !Ref AppSecretArn },
         ]
       DBSubnetGroupName: !Ref DbSubnetGroup
       VPCSecurityGroups:

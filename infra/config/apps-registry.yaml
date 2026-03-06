@@ -1,10 +1,8 @@
-# Applications registry — 2 apps per tenant (simplified from 7)
+# Applications registry — 2 apps per tenant
 # Each app has isolated DB, config, and secrets per (tenant, environment)
-version: "1.0"
-updated_at: "2025-03-04"
 
 applications:
-  - id: app1
-    name: Application One
-  - id: app2
-    name: Application Two
+  - id: foo
+    name: FooApp
+  - id: baz
+    name: BazApp

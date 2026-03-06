@@ -4,8 +4,8 @@
 # Uses deploy-tenant-env.sh for each (tenant, env) so every tenant gets the full module set.
 #
 # Usage:
-#   ./deploy-all-tenants.sh
-#   DEPLOY_TENANTS="base abc" ./deploy-all-tenants.sh
+#   ./deploy-tenants.sh
+#   DEPLOY_TENANTS="base abc" ./deploy-tenants.sh
 #
 # Env vars (optional):
 #   DEPLOY_TENANTS  Space-separated tenant IDs (default: base abc xyz)

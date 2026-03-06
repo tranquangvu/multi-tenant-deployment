@@ -1,41 +1,34 @@
-# Tenant registry — base has stage + prod; other tenants have prod only
-# Used by pipelines to resolve AWS account, region, and promotion targets
-version: "1.0"
-updated_at: "2025-03-05"
+# Tenant registry — base has stage + prod; other tenants have prod only.
+# Used for documentation today; later for pipelines to resolve target account and role per (tenant, env).
+#
+# When using AWS Landing Zone / multi-account:
+#   - accounts: one AWS account per (tenant, environment). Pipeline uses this to assume role and deploy.
+#   - deployment_role_arn: role to assume in target account (e.g. Landing Zone deployment role).
+#   - region: deployment region for this tenant (can override per-environment if needed).
 
 tenants:
   base:
-    id: base
     name: Base
-    type: base
-    enabled: true
     region: us-east-1
-    aws_account_id: "111111111111"
-    status: active
-    description: First deployment target; validation environment.
     environments: [stage, prod]
+    # Future (Landing Zone): account per environment
+    # accounts:
+    #   stage: "111111111111"
+    #   prod: "222222222222"
+    # deployment_role_arn: "arn:aws:iam::${account_id}:role/OrganizationAccountAccessRole"
 
   abc:
-    id: abc
     name: ABC
-    type: silo
-    enabled: true
     region: us-east-1
-    aws_account_id: "222222222222"
-    status: active
-    description: Silo tenant ABC.
     environments: [prod]
+    # accounts:
+    #   prod: "333333333333"
+    # deployment_role_arn: "arn:aws:iam::${account_id}:role/OrganizationAccountAccessRole"
 
   xyz:
-    id: xyz
     name: XYZ
-    type: silo
-    enabled: true
     region: us-east-1
-    aws_account_id: "333333333333"
-    status: active
-    description: Silo tenant XYZ.
     environments: [prod]
-
-# Only base has stage + prod; all other tenants have production only.
-# Pipeline: deploy to base (stage then prod), then promote to selected tenants (prod only).
+    # accounts:
+    #   prod: "444444444444"
+    # deployment_role_arn: "arn:aws:iam::${account_id}:role/OrganizationAccountAccessRole"

@@ -1,50 +1,59 @@
 # Bitbucket Pipelines — Infrastructure repo (multi-tenant CloudFormation)
-# Deploys to base (stage/prod) first; then optional promotion to selected tenants.
-# Base has stage + prod; other tenants (abc, xyz) have prod only.
+# 1) Upload templates to S3  2) Deploy root stack (main.yaml) per tenant/env.
+# Base has stage + prod; other tenants (abc, xyz) have production only.
+# Repo variables: AWS_*, TEMPLATES_S3_BUCKET
 
 image: atlassian/default-image:3
 
 definitions:
-  yaml-anchors:
-    - &install-aws
-        pipe: atlassian/aws-cli:1.0.0
-        variables:
-          AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
-          AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
-          AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
-
   steps:
-    - step: &deploy-tenant-env
-        name: Deploy tenant environment
+    - step: &upload-templates
+        name: Upload templates to S3
         script:
           - chmod +x ./scripts/*.sh
           - |
-            if [[ -n "${DEPLOY_TENANT_ID}" && -n "${DEPLOY_ENVIRONMENT}" ]]; then
-              ./scripts/deploy-tenant-env.sh "${DEPLOY_TENANT_ID}" "${DEPLOY_ENVIRONMENT}"
-            else
-              echo "DEPLOY_TENANT_ID and DEPLOY_ENVIRONMENT must be set"
+            if [[ -z "${TEMPLATES_S3_BUCKET}" ]]; then
+              echo "Set repository variable TEMPLATES_S3_BUCKET"
               exit 1
             fi
+            export TEMPLATES_S3_PREFIX="${TEMPLATES_S3_PREFIX:-cfn/templates}"
+            ./scripts/upload-templates-to-s3.sh
+
+    - step: &deploy-main-base-stage
+        name: Deploy Base Stage (root stack)
+        deployment: base-stage
+        script:
+          - chmod +x ./scripts/*.sh
+          - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET}"
+          - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
+          - export AWS_REGION="$AWS_DEFAULT_REGION"
+          - ./scripts/upload-templates-to-s3.sh
+          - ./scripts/deploy-stack.sh mt-base-stage-main tenants/base/stage/main.yaml tenants/base/stage/params.json
+
+    - step: &deploy-main-base-prod
+        name: Deploy Base Production (root stack)
+        deployment: base-prod
+        trigger: manual
+        script:
+          - chmod +x ./scripts/*.sh
+          - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET}"
+          - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
+          - export AWS_REGION="$AWS_DEFAULT_REGION"
+          - ./scripts/upload-templates-to-s3.sh
+          - ./scripts/deploy-stack.sh mt-base-prod-main tenants/base/production/main.yaml tenants/base/production/params.json
 
 pipelines:
   branches:
     main:
-      - step:
-          name: Deploy Base Stage
-          deployment: base-stage
-          script:
-            - chmod +x ./scripts/*.sh
-            - ./scripts/deploy-tenant-env.sh base stage
-      - step:
-          name: Deploy Base Prod
-          deployment: base-prod
-          trigger: manual
-          script:
-            - chmod +x ./scripts/*.sh
-            - ./scripts/deploy-tenant-env.sh base prod
+      - step: *deploy-main-base-stage
+      - step: *deploy-main-base-prod
 
   custom:
-    # Deploy single (tenant, environment). Base: stage or prod; others: prod only
+    # Upload CloudFormation templates to S3 only (no deploy)
+    upload-templates:
+      - step: *upload-templates
+
+    # Deploy root stack for one (tenant, environment). Base: stage or production; others: production only.
     deploy-tenant:
       - variables:
           - name: DEPLOY_TENANT_ID
@@ -52,36 +61,42 @@ pipelines:
           - name: DEPLOY_ENVIRONMENT
             default: stage
       - step:
-          name: Deploy to $DEPLOY_TENANT_ID / $DEPLOY_ENVIRONMENT
+          name: Upload templates then deploy $DEPLOY_TENANT_ID / $DEPLOY_ENVIRONMENT
           script:
             - chmod +x ./scripts/*.sh
-            - ./scripts/deploy-tenant-env.sh "$DEPLOY_TENANT_ID" "$DEPLOY_ENVIRONMENT"
+            - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET}"
+            - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh $DEPLOY_TENANT_ID)"
+            - export AWS_REGION="$AWS_DEFAULT_REGION"
+            - ./scripts/upload-templates-to-s3.sh
+            - |
+              ENV_NAME="$DEPLOY_ENVIRONMENT"
+              [[ "$ENV_NAME" == "prod" ]] && ENV_NAME="production"
+              CFN_ENV="stage"; [[ "$ENV_NAME" == "production" ]] && CFN_ENV="prod"
+              ./scripts/deploy-stack.sh "mt-${DEPLOY_TENANT_ID}-${CFN_ENV}-main" "tenants/${DEPLOY_TENANT_ID}/${ENV_NAME}/main.yaml" "tenants/${DEPLOY_TENANT_ID}/${ENV_NAME}/params.json"
 
-    # Promote to multiple tenants (prod only for abc/xyz). Set PROMOTE_TENANTS=abc,xyz and PROMOTE_ENVS=prod
+    # Promote to multiple tenants (production only for abc/xyz)
     promote-tenants:
       - variables:
           - name: PROMOTE_TENANTS
             default: ""
-          - name: PROMOTE_ENVS
-            default: "prod"
       - step:
-          name: Promote to selected tenants
+          name: Upload templates then promote to tenants
           trigger: manual
           script:
             - chmod +x ./scripts/*.sh
+            - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET}"
+            - ./scripts/upload-templates-to-s3.sh
             - |
               if [[ -z "$PROMOTE_TENANTS" ]]; then
-                echo "Set PROMOTE_TENANTS (e.g. abc,xyz or 'all' for abc + xyz)"
+                echo "Set PROMOTE_TENANTS (e.g. abc,xyz or 'all')"
                 exit 1
               fi
-              TENANTS="$PROMOTE_TENANTS"
-              [[ "$PROMOTE_TENANTS" == "all" ]] && TENANTS="abc,xyz"
-              IFS=',' read -ra TARR <<< "$TENANTS"
-              IFS=',' read -ra EARR <<< "$PROMOTE_ENVS"
+              [[ "$PROMOTE_TENANTS" == "all" ]] && PROMOTE_TENANTS="abc,xyz"
+              IFS=',' read -ra TARR <<< "$PROMOTE_TENANTS"
               for t in "${TARR[@]}"; do
-                for e in "${EARR[@]}"; do
-                  echo "Deploying $t $e..."
-                  ./scripts/deploy-tenant-env.sh "$t" "$e" || { echo "Failed $t $e"; exit 1; }
-                done
+                echo "Deploying $t production..."
+                export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh "$t")"
+                export AWS_REGION="$AWS_DEFAULT_REGION"
+                ./scripts/deploy-stack.sh "mt-${t}-prod-main" "tenants/${t}/production/main.yaml" "tenants/${t}/production/params.json" || { echo "Failed $t"; exit 1; }
               done
               echo "Promotion complete."

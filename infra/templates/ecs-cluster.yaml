@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Module: ECS cluster - one per (TenantId, Environment). Shared by app1 and app2."
+Description: "Module: ECS cluster - one per (TenantId, Environment). Shared by foo and baz."
 
 Parameters:
   TenantId:

@@ -60,10 +60,10 @@ Resources:
         - Key: ManagedBy
           Value: CloudFormation
 
-  TargetGroupApp1:
+  TargetGroupFoo:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-tg-app1"
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-tg-foo"
       Port: 8080
       Protocol: HTTP
       VpcId: !ImportValue
@@ -78,12 +78,12 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
         - Key: ApplicationId
-          Value: app1
+          Value: foo
 
-  TargetGroupApp2:
+  TargetGroupBaz:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-tg-app2"
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-tg-baz"
       Port: 8080
       Protocol: HTTP
       VpcId: !ImportValue
@@ -98,7 +98,7 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
         - Key: ApplicationId
-          Value: app2
+          Value: baz
 
   Listener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -108,10 +108,10 @@ Resources:
       Protocol: HTTP
       DefaultActions:
         - Type: forward
-          TargetGroupArn: !Ref TargetGroupApp1
+          TargetGroupArn: !Ref TargetGroupFoo
           Order: 1
 
-  ListenerRuleApp2:
+  ListenerRuleBaz:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       ListenerArn: !Ref Listener
@@ -120,11 +120,11 @@ Resources:
         - Field: path-pattern
           PathPatternConfig:
             Values:
-              - "/app2/*"
-              - "/app2"
+              - "/baz/*"
+              - "/baz"
       Actions:
         - Type: forward
-          TargetGroupArn: !Ref TargetGroupApp2
+          TargetGroupArn: !Ref TargetGroupBaz
 
 Outputs:
   AlbDnsName:
@@ -142,13 +142,13 @@ Outputs:
     Value: !Ref Listener
     Export:
       Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-ListenerArn"
-  TargetGroupApp1Arn:
-    Description: Target group ARN for app1
-    Value: !Ref TargetGroupApp1
+  TargetGroupFooArn:
+    Description: Target group ARN for foo
+    Value: !Ref TargetGroupFoo
     Export:
-      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-TargetGroupApp1Arn"
-  TargetGroupApp2Arn:
-    Description: Target group ARN for app2
-    Value: !Ref TargetGroupApp2
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-TargetGroupFooArn"
+  TargetGroupBazArn:
+    Description: Target group ARN for baz
+    Value: !Ref TargetGroupBaz
     Export:
-      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-TargetGroupApp2Arn"
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-TargetGroupBazArn"

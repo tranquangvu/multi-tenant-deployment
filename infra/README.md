@@ -1,82 +1,95 @@
 # Multi-Tenant Infrastructure (AWS CloudFormation)
 
-This directory contains AWS CloudFormation templates and scripts for the multi-tenant deployment framework: **2 applications (app1, app2)** per tenant. **Only base has stage + prod**; all other tenants (abc, xyz) have **production only**.
+**2 applications (foo, baz)** per tenant. **Only base has stage + production**; other tenants (abc, xyz) have **production only**.
 
 ## Structure
 
 - **`config/`** — Tenant and app registry (YAML)
-- **`templates/`** — CloudFormation templates by AWS service:
-  - **network** — VPC, subnets, NAT, IGW
-  - **security** — Security groups, pipeline IAM role
-  - **secrets** — Secrets Manager per app
-  - **ecr** — ECR repository per app
-  - **rds** — RDS PostgreSQL per app
-  - **alb** — Application Load Balancer + target groups (app1, app2)
-  - **ecs-cluster** — ECS cluster (shared by app1 and app2)
-  - **ecs-service** — ECS Fargate service + task definition per app
-- **`tenants/<id>/`** — Parameter files per tenant: `tenants/base/`, `tenants/abc/`, `tenants/xyz/`
-- **`scripts/`** — `deploy-stack.sh`, `deploy-tenant-env.sh`
+- **`templates/`** — CloudFormation module templates (network, security, secrets, ecr, rds, alb, ecs-cluster, ecs-service). Uploaded to S3 for root stack deployment.
+- **`tenants/[tenant-name]/[stage|production]/`** — Per-tenant, per-environment:
+  - **`main.yaml`** — Root stack that registers all modules via **TemplateURL** (S3). Deploys nested stacks for each module.
+  - **`params.json`** — Parameters for the root stack (TenantId, Environment, StackPrefix, TemplatesS3Bucket, TemplatesS3Prefix).
+- **`scripts/`** — `upload-templates-to-s3.sh`, `deploy-stack.sh` (use for both module stacks and root main.yaml), `deploy-tenant-env.sh`
 
-## How all modules are used in each tenant
+## Tenant layout
 
-**Every (tenant, environment)** gets the **full set** of modules. One run of `deploy-tenant-env.sh <tenant-id> <environment>` deploys all of these stacks for that tenant + env:
-
-| Module      | Stacks per (tenant, env) | Description                  |
-| ----------- | ------------------------ | ---------------------------- |
-| network     | 1                        | VPC, subnets, NAT, IGW       |
-| security    | 1                        | App SG, DB SG, pipeline role |
-| secrets     | 2 (app1, app2)           | Secrets Manager per app      |
-| ecr         | 2 (app1, app2)           | ECR repo per app             |
-| ecs-cluster | 1                        | ECS cluster (shared)         |
-| rds         | 2 (app1, app2)           | RDS PostgreSQL per app       |
-| alb         | 1                        | ALB + 2 target groups        |
-| ecs-service | 2 (app1, app2)           | Fargate service per app      |
-
-**Example:** For `base` + `stage` you get e.g. `mt-base-stage-network`, … `mt-base-stage-ecs-app2`. Same stack set for `base`+`prod`. For `abc` and `xyz` only **prod** exists: `mt-abc-prod-network`, … `mt-xyz-prod-ecs-app2` (each tenant has params under `tenants/<id>/`).
-
-## Deploy order (per tenant + environment)
-
-1. **network** → **security** → **secrets** (app1, app2) → **ecr** (app1, app2) → **ecs-cluster** → **rds** (app1, app2) → **alb** → **ecs-service** (app1, app2)
-
-## Deploy one (tenant, environment)
-
-```bash
-export AWS_PROFILE=your-profile   # or use env vars AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
-# Base: stage and prod
-./scripts/deploy-tenant-env.sh base stage
-./scripts/deploy-tenant-env.sh base prod
-# Other tenants: prod only (deploying abc/xyz with stage will exit with an error)
-./scripts/deploy-tenant-env.sh abc prod
-./scripts/deploy-tenant-env.sh xyz prod
+```
+tenants/
+├── _shared/
+│   └── main.yaml              # Root stack (TemplateURL → S3)
+├── base/
+│   ├── stage/
+│   │   ├── main.yaml
+│   │   └── params.json
+│   └── production/
+│       ├── main.yaml
+│       └── params.json
+├── abc/
+│   └── production/
+│       ├── main.yaml
+│       └── params.json
+└── xyz/
+    └── production/
+        ├── main.yaml
+        └── params.json
 ```
 
-## Deploy all tenants (all modules in each)
+## Deploy (root stack via S3)
 
-Runs **all modules** for each tenant. Base gets **stage** then **prod**; abc and xyz get **prod** only.
+1. **Upload templates to S3** (required once per change):
+
+   ```bash
+   export TEMPLATES_S3_BUCKET=your-cfn-templates-bucket
+   ./scripts/upload-templates-to-s3.sh
+   ```
+
+2. **Deploy root stack** (main.yaml) for one (tenant, environment). This creates the main stack and all nested stacks:
+
+   ```bash
+   export TEMPLATES_S3_BUCKET=your-cfn-templates-bucket
+   ./scripts/deploy-stack.sh mt-base-stage-main    tenants/base/stage/main.yaml    tenants/base/stage/params.json
+   ./scripts/deploy-stack.sh mt-base-prod-main     tenants/base/production/main.yaml tenants/base/production/params.json
+   ./scripts/deploy-stack.sh mt-abc-prod-main     tenants/abc/production/main.yaml tenants/abc/production/params.json
+   ./scripts/deploy-stack.sh mt-xyz-prod-main     tenants/xyz/production/main.yaml tenants/xyz/production/params.json
+   ```
+
+   **deploy-stack.sh** accepts a template path (e.g. `tenants/base/stage/main.yaml`) or a template filename (e.g. `network.yaml` for `templates/`). It substitutes `\${TEMPLATES_S3_BUCKET}` in params from the environment.
+
+When deploying a **root stack** manually, set the region from the tenant registry so the stack is created in the correct region:
 
 ```bash
-./scripts/deploy-all-tenants.sh
+export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
+./scripts/deploy-stack.sh mt-base-stage-main tenants/base/stage/main.yaml tenants/base/stage/params.json
 ```
 
-Optional: limit to specific tenants:
+**deploy-tenant-env.sh** and the Bitbucket pipeline set `AWS_DEFAULT_REGION` from `config/tenant-registry.yaml` automatically for the tenant being deployed.
+
+## Bitbucket pipeline (upload + deploy)
+
+- **Repository variables:** `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, **`TEMPLATES_S3_BUCKET`** (S3 bucket for templates).
+- **main branch:** Upload templates to S3 → Deploy base stage (root stack); then manual step to deploy base production.
+- **Custom `upload-templates`:** Upload templates to S3 only.
+- **Custom `deploy-tenant`:** Upload templates then deploy root stack for chosen tenant and environment (stage or production).
+- **Custom `promote-tenants`:** Upload templates then deploy root stack for selected tenants (production only for abc/xyz).
+
+## Legacy deploy (per-stack, no S3)
+
+To deploy each module stack individually (templates from repo, no S3):
 
 ```bash
-DEPLOY_TENANTS="base abc" ./scripts/deploy-all-tenants.sh   # base (stage+prod), abc (prod only)
+./scripts/deploy-tenant-env.sh base stage   # or base prod, abc prod, xyz prod
+./scripts/deploy-tenants.sh
 ```
+
+Uses **`deploy-stack.sh`** and expects params in the old shape; for the new layout you use **`deploy-tenant-main.sh`** and S3 instead.
 
 ## Stack naming
 
-- Pattern: `{prefix}-{tenant-id}-{environment}-{layer}`
-- Example: `mt-base-stage-network`, `mt-abc-prod-ecs-app1`, `mt-base-stage-alb`
-- Prefix default: `mt` (override with `STACK_PREFIX`).
+- **Root stack:** `{prefix}-{tenant-id}-{stage|prod}-main` (e.g. `mt-base-stage-main`, `mt-abc-prod-main`).
+- **Nested stacks:** Created by the root stack with names assigned by CloudFormation (based on root stack name + logical ID).
 
-## Bitbucket (infra repo)
-
-Use **`bitbucket-pipelines.yml`** in this repo (or copy from `../pipelines/bitbucket-pipelines-infra.yml`). Configure repository variables:
-
-- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`
-- For multi-account: use one pipeline per account or assume role per tenant (see docs).
+Prefix default: `mt` (override with `STACK_PREFIX`).
 
 ## Multi-account
 
-For separate AWS accounts per tenant, run the pipeline (or script) in each account, or assume a role per tenant using `aws sts assume-role` and then run `deploy-tenant-env.sh`. Tenant account IDs are in `config/tenant-registry.yaml`.
+Use one S3 bucket per account (or shared bucket with prefix per account). Run upload and deploy in the target account (or after assuming the tenant role). Tenant account IDs are in `config/tenant-registry.yaml`.

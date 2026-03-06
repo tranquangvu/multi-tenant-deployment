@@ -12,30 +12,27 @@ PARAMS_DIR="${3:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PREFIX="${STACK_PREFIX:-mt}"
 
+# Use region from tenant registry (config/tenant-registry.yaml) so all AWS/CloudFormation calls target that region
+export AWS_DEFAULT_REGION="$("$SCRIPT_DIR/get-tenant-region.sh" "$TENANT_ID")"
+export AWS_REGION="$AWS_DEFAULT_REGION"
+echo "Deploying to region: $AWS_DEFAULT_REGION"
+
 # Only base has stage; all other tenants (abc, xyz) have prod only
 if [[ "$TENANT_ID" != "base" && "$ENV" == "stage" ]]; then
   echo "Only base tenant has a stage environment. Use prod for ${TENANT_ID}." >&2
   exit 1
 fi
 
-if [[ -z "$PARAMS_DIR" ]]; then
-  PARAMS_DIR="$SCRIPT_DIR/../tenants/${TENANT_ID}"
-  if [[ "$TENANT_ID" == "base" ]]; then
-    BASE_PARAMS="$PARAMS_DIR/${TENANT_ID}-${ENV}-params.json"
-  else
-    BASE_PARAMS="$PARAMS_DIR/${ENV}-params.json"
-  fi
-else
-  if [[ "$TENANT_ID" == "base" ]]; then
-    BASE_PARAMS="$PARAMS_DIR/${TENANT_ID}-${ENV}-params.json"
-  else
-    BASE_PARAMS="$PARAMS_DIR/${ENV}-params.json"
-  fi
-fi
-if [[ ! -f "$BASE_PARAMS" ]]; then
-  echo "Parameters file not found: $BASE_PARAMS" >&2
+# Legacy deploy: use tenants/<id>/<stage|production>/params.json; only TenantId, Environment, StackPrefix passed to module templates
+PARAMS_DIR="${PARAMS_DIR:-$SCRIPT_DIR/../tenants/${TENANT_ID}}"
+ENV_DIR="stage"
+[[ "$ENV" == "prod" ]] && ENV_DIR="production"
+if [[ ! -f "$PARAMS_DIR/${ENV_DIR}/params.json" ]]; then
+  echo "Parameters file not found: $PARAMS_DIR/${ENV_DIR}/params.json" >&2
   exit 1
 fi
+BASE_PARAMS="/tmp/${TENANT_ID}-${ENV}-legacy-params.json"
+jq '[.[] | select(.ParameterKey | IN("TenantId", "Environment", "StackPrefix"))]' "$PARAMS_DIR/${ENV_DIR}/params.json" > "$BASE_PARAMS"
 
 deploy_stack() {
   local name="$1"
@@ -51,8 +48,8 @@ deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-network" "network.yaml" "$BASE_PARAM
 # 2. Security
 deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-security" "security.yaml" "$BASE_PARAMS"
 
-# 3. Secrets per app (app1, app2)
-for app in app1 app2; do
+# 3. Secrets per app (foo, baz)
+for app in foo baz; do
   PARAMS_APP="$PARAMS_DIR/${TENANT_ID}-${ENV}-params-${app}.json"
   if [[ ! -f "$PARAMS_APP" ]]; then
     PARAMS_APP="/tmp/${TENANT_ID}-${ENV}-${app}-params.json"
@@ -62,7 +59,7 @@ for app in app1 app2; do
 done
 
 # 4. ECR per app
-for app in app1 app2; do
+for app in foo baz; do
   PARAMS_APP="/tmp/${TENANT_ID}-${ENV}-ecr-${app}-params.json"
   jq --arg app "$app" '. + [{"ParameterKey": "ApplicationId", "ParameterValue": $app}]' "$BASE_PARAMS" > "$PARAMS_APP"
   deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-ecr-${app}" "ecr.yaml" "$PARAMS_APP"
@@ -72,16 +69,16 @@ done
 deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-ecs-cluster" "ecs-cluster.yaml" "$BASE_PARAMS"
 
 # 6. RDS per app
-for app in app1 app2; do
-  DB_SECRET_ARN=$(aws cloudformation describe-stacks \
+for app in foo baz; do
+  APP_SECRET_ARN=$(aws cloudformation describe-stacks \
     --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-secrets-${app}" \
-    --query "Stacks[0].Outputs[?OutputKey=='DbSecretArn'].OutputValue | [0]" \
+    --query "Stacks[0].Outputs[?OutputKey=='AppSecretArn'].OutputValue | [0]" \
     --output text)
   PARAMS_DATA="/tmp/${TENANT_ID}-${ENV}-rds-${app}-params.json"
-  jq --arg app "$app" --arg arn "$DB_SECRET_ARN" \
+  jq --arg app "$app" --arg arn "$APP_SECRET_ARN" \
     '. + [
       {"ParameterKey": "ApplicationId", "ParameterValue": $app},
-      {"ParameterKey": "DbSecretArn", "ParameterValue": $arn}
+      {"ParameterKey": "AppSecretArn", "ParameterValue": $arn}
     ]' "$BASE_PARAMS" > "$PARAMS_DATA"
   deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-rds-${app}" "rds.yaml" "$PARAMS_DATA"
 done
@@ -89,16 +86,20 @@ done
 # 7. ALB
 deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-alb" "alb.yaml" "$BASE_PARAMS"
 
-# 8. ECS service per app (with ECR URI and target group)
-for app in app1 app2; do
+# 8. ECS service per app (with ECR URI, target group, app secret for DATABASE_URL and other env vars)
+for app in foo baz; do
   ECR_URI=$(aws cloudformation describe-stacks \
     --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-ecr-${app}" \
     --query "Stacks[0].Outputs[?OutputKey=='EcrRepoUri'].OutputValue | [0]" \
     --output text)
-  if [[ "$app" == "app1" ]]; then
-    TG_KEY="TargetGroupApp1Arn"
+  APP_SECRET_ARN=$(aws cloudformation describe-stacks \
+    --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-secrets-${app}" \
+    --query "Stacks[0].Outputs[?OutputKey=='AppSecretArn'].OutputValue | [0]" \
+    --output text)
+  if [[ "$app" == "foo" ]]; then
+    TG_KEY="TargetGroupFooArn"
   else
-    TG_KEY="TargetGroupApp2Arn"
+    TG_KEY="TargetGroupBazArn"
   fi
   TG_ARN=$(aws cloudformation describe-stacks \
     --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-alb" \
@@ -109,11 +110,13 @@ for app in app1 app2; do
     --arg app "$app" \
     --arg uri "$ECR_URI" \
     --arg tg "$TG_ARN" \
+    --arg appSecret "$APP_SECRET_ARN" \
     --slurpfile b "$BASE_PARAMS" \
     '($b[0] // []) + [
       {"ParameterKey": "ApplicationId", "ParameterValue": $app},
       {"ParameterKey": "EcrRepoUri", "ParameterValue": $uri},
-      {"ParameterKey": "TargetGroupArn", "ParameterValue": $tg}
+      {"ParameterKey": "TargetGroupArn", "ParameterValue": $tg},
+      {"ParameterKey": "AppSecretArn", "ParameterValue": $appSecret}
     ]' > "$PARAMS_ECS"
   deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-ecs-${app}" "ecs-service.yaml" "$PARAMS_ECS"
 done
