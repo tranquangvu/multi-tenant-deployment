@@ -2,10 +2,7 @@
   { "ParameterKey": "TenantId", "ParameterValue": "base" },
   { "ParameterKey": "Environment", "ParameterValue": "stage" },
   { "ParameterKey": "StackPrefix", "ParameterValue": "mt" },
-  {
-    "ParameterKey": "TemplatesS3Bucket",
-    "ParameterValue": "${TEMPLATES_S3_BUCKET}"
-  },
+  { "ParameterKey": "TemplatesS3Bucket", "ParameterValue": "${TEMPLATES_S3_BUCKET}" },
   { "ParameterKey": "TemplatesS3Prefix", "ParameterValue": "ascenasia-cfn/templates" },
   { "ParameterKey": "FooAppDesiredCount", "ParameterValue": "0" },
   { "ParameterKey": "BazAppDesiredCount", "ParameterValue": "0" }
