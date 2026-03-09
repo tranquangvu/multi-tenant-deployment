@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deploy a single CloudFormation stack.
 # Usage: ./deploy-stack.sh <stack-name> <template-file-or-path> [params-file]
-#   Template: filename (e.g. network.yaml) for infra/templates/, or path (e.g. tenants/base/stage/main.yaml) for root stack.
+#   Template: filename (e.g. network.yaml) for templates/, or path (e.g. tenants/base/stage/main.yaml) for root stack.
 #   Params: JSON array; ${TEMPLATES_S3_BUCKET} in values is replaced from env.
 set -euo pipefail
 
@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INFRA_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 TEMPLATES_DIR="$INFRA_DIR/templates"
 
-# Resolve template path: path (contains /) -> under infra; else -> templates/
+# Resolve template path: path (contains /) -> under project root; else -> templates/
 if [[ "$TEMPLATE_FILE" == */* ]]; then
   TEMPLATE_PATH="$INFRA_DIR/$TEMPLATE_FILE"
 else
@@ -32,7 +32,7 @@ fi
 
 EXTRA_ARGS=()
 if [[ -n "$PARAMS_FILE" ]]; then
-  # Resolve params path (relative to infra dir if path contains /)
+  # Resolve params path (relative to project root if path contains /)
   if [[ "$PARAMS_FILE" == */* ]]; then
     PARAMS_PATH="$INFRA_DIR/$PARAMS_FILE"
   else

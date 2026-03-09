@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Module: Security - Security groups, IAM pipeline role. One per (TenantId, Environment)."
+
+Parameters:
+  TenantId:
+    Type: String
+    Description: Tenant identifier (base, abc, xyz, ...)
+  Environment:
+    Type: String
+    AllowedValues: [stage, prod]
+    Description: Environment (stage or prod)
+  StackPrefix:
+    Type: String
+    Default: mt
+    Description: Prefix for stack and resource names
+  BitbucketOidcAudience:
+    Type: String
+    Default: pip
+  BitbucketWorkspace:
+    Type: String
+    Default: my-workspace
+  BitbucketRepo:
+    Type: String
+    Default: "*"
+
+Resources:
+  VpcIdImport:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${StackPrefix}/${TenantId}/${Environment}/network/VpcId"
+      Type: String
+      Value: !ImportValue
+        Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-VpcId"
+      Description: VPC ID for this tenant environment
+
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${StackPrefix}-${TenantId}-${Environment}-app-sg"
+      GroupDescription: Security group for app compute (ECS/ALB)
+      VpcId: !ImportValue
+        Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-VpcId"
+      Tags:
+        - Key: Name
+          Value: !Sub "${StackPrefix}-${TenantId}-${Environment}-app-sg"
+        - Key: TenantId
+          Value: !Ref TenantId
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  AppSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref AppSecurityGroup
+      IpProtocol: tcp
+      FromPort: 8080
+      ToPort: 8080
+      CidrIp: 10.0.0.0/8
+      Description: Allow app port from VPC
+
+  DbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${StackPrefix}-${TenantId}-${Environment}-db-sg"
+      GroupDescription: Security group for RDS
+      VpcId: !ImportValue
+        Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-VpcId"
+      Tags:
+        - Key: Name
+          Value: !Sub "${StackPrefix}-${TenantId}-${Environment}-db-sg"
+        - Key: TenantId
+          Value: !Ref TenantId
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  DbSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref DbSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref AppSecurityGroup
+      Description: Allow PostgreSQL from app SG
+
+  PipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${StackPrefix}-${TenantId}-${Environment}-pipeline-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub "arn:aws:iam::${AWS::AccountId}:oidc-provider/bitbucket.org"
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                bitbucket.org:aud: !Ref BitbucketOidcAudience
+              StringLike:
+                bitbucket.org:sub: !Sub "repo:${BitbucketWorkspace}/${BitbucketRepo}:*"
+      Tags:
+        - Key: TenantId
+          Value: !Ref TenantId
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  PipelineRolePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${StackPrefix}-${TenantId}-${Environment}-pipeline-policy"
+      Roles: [!Ref PipelineRole]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - cloudformation:*
+              - s3:GetObject
+              - s3:PutObject
+              - s3:ListBucket
+              - iam:PassRole
+              - ec2:Describe*
+              - ecr:GetAuthorizationToken
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - ecr:BatchCheckLayerAvailability
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+            Resource: !Sub "arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/*"
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${StackPrefix}-${TenantId}-${Environment}-*"
+          - Effect: Allow
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParameters
+            Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${StackPrefix}/${TenantId}/${Environment}/*"
+
+Outputs:
+  AppSecurityGroupId:
+    Description: Security group for application compute
+    Value: !Ref AppSecurityGroup
+    Export:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-AppSecurityGroupId"
+  DbSecurityGroupId:
+    Description: Security group for RDS
+    Value: !Ref DbSecurityGroup
+    Export:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-DbSecurityGroupId"
+  PipelineRoleArn:
+    Description: IAM role ARN for Bitbucket pipeline
+    Value: !GetAtt PipelineRole.Arn
+    Export:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-PipelineRoleArn"
