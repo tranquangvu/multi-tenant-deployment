@@ -51,6 +51,15 @@ if [[ -n "$PARAMS_FILE" ]]; then
   [[ -n "$OVERRIDES" ]] && EXTRA_ARGS=(--parameter-overrides $OVERRIDES)
 fi
 
+# Stack in ROLLBACK_COMPLETE cannot be updated; delete it so deploy can create a fresh stack
+STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+if [[ "$STATUS" == "ROLLBACK_COMPLETE" ]]; then
+  echo "Stack $STACK_NAME is in ROLLBACK_COMPLETE; deleting before deploy..."
+  aws cloudformation delete-stack --stack-name "$STACK_NAME"
+  aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+  echo "Stack deleted. Proceeding with deploy (create)."
+fi
+
 aws cloudformation deploy \
   --stack-name "$STACK_NAME" \
   --template-file "$TEMPLATE_PATH" \
