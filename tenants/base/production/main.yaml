@@ -19,8 +19,8 @@ Parameters:
     Description: S3 bucket where CloudFormation templates are uploaded
   TemplatesS3Prefix:
     Type: String
-    Default: ascenasia-cfn/templates
-    Description: S3 prefix for template files (e.g. cfn/templates or ascenasia-cfn/templates)
+    Default: cfn/templates
+    Description: S3 prefix (key prefix) for template files
   VpcCidr:
     Type: String
     Default: 10.0.0.0/16

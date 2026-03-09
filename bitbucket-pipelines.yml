@@ -24,7 +24,7 @@ definitions:
             fi
             export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
             echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
-            export TEMPLATES_S3_PREFIX="${TEMPLATES_S3_PREFIX:-ascenasia-cfn/templates}"
+            export TEMPLATES_S3_PREFIX="${TEMPLATES_S3_PREFIX:-cfn/templates}"
             ./scripts/upload-templates-to-s3.sh
 
     - step: &deploy-main-base-stage
