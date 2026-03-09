@@ -67,6 +67,7 @@ Resources:
       EngineVersion: !Ref EngineVersion
       DBInstanceClass: !Ref DbInstanceClass
       AllocatedStorage: !Ref DbAllocatedStorage
+      DBName: appdb
       MasterUsername: !Sub "{{resolve:secretsmanager:${AppSecretArn}:SecretString:username}}"
       MasterUserPassword: !Sub "{{resolve:secretsmanager:${AppSecretArn}:SecretString:password}}"
       DBSubnetGroupName: !Ref DbSubnetGroup
