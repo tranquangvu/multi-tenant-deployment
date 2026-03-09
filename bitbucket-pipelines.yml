@@ -29,7 +29,7 @@ definitions:
 
     - step: &deploy-main-base-stage
         name: Deploy Base Stage (root stack)
-        deployment: base-stage
+        deployment: Production
         oidc: true
         script:
           - chmod +x ./scripts/*.sh
@@ -43,7 +43,7 @@ definitions:
 
     - step: &deploy-main-base-prod
         name: Deploy Base Production (root stack)
-        deployment: base-prod
+        deployment: Production
         trigger: manual
         oidc: true
         script:
