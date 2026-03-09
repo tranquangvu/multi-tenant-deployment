@@ -124,7 +124,10 @@ Resources:
 
   RdsFooAppStack:
     Type: AWS::CloudFormation::Stack
-    DependsOn: SecretsFooAppStack
+    DependsOn:
+      - NetworkStack
+      - SecurityStack
+      - SecretsFooAppStack
     Properties:
       TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/rds.yaml"
       Parameters:
@@ -136,7 +139,10 @@ Resources:
 
   RdsBazAppStack:
     Type: AWS::CloudFormation::Stack
-    DependsOn: SecretsBazAppStack
+    DependsOn:
+      - NetworkStack
+      - SecurityStack
+      - SecretsBazAppStack
     Properties:
       TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/rds.yaml"
       Parameters:

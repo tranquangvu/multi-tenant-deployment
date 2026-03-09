@@ -33,6 +33,10 @@ Parameters:
   AppSecretArn:
     Type: String
     Description: ARN of the app secret (from secrets module for this app)
+  EngineVersion:
+    Type: String
+    Default: "15.5"
+    Description: PostgreSQL engine version (e.g. 15.5, 16.1). Override if not available in your region.
 
 Resources:
   DbSubnetGroup:
@@ -60,19 +64,11 @@ Resources:
     Properties:
       DBInstanceIdentifier: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-db"
       Engine: postgres
-      EngineVersion: "15.4"
+      EngineVersion: !Ref EngineVersion
       DBInstanceClass: !Ref DbInstanceClass
       AllocatedStorage: !Ref DbAllocatedStorage
-      MasterUsername:
-        !Sub [
-          "{{resolve:secretsmanager:${SecretArn}:SecretString:username}}",
-          { SecretArn: !Ref AppSecretArn },
-        ]
-      MasterUserPassword:
-        !Sub [
-          "{{resolve:secretsmanager:${SecretArn}:SecretString:password}}",
-          { SecretArn: !Ref AppSecretArn },
-        ]
+      MasterUsername: !Sub "{{resolve:secretsmanager:${AppSecretArn}:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${AppSecretArn}:SecretString:password}}"
       DBSubnetGroupName: !Ref DbSubnetGroup
       VPCSecurityGroups:
         - !ImportValue
