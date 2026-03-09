@@ -60,7 +60,7 @@ pipelines:
   branches:
     main:
       - step: *deploy-main-base-stage
-      - step: *deploy-main-base-prod
+      # - step: *deploy-main-base-prod
 
   custom:
     # Upload CloudFormation templates to S3 only (no deploy)
