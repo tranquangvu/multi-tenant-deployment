@@ -4,7 +4,7 @@
 # OIDC: set AWS_ROLE_ARN in each deployment environment (and repo var for upload-templates).
 # Repo variables: TEMPLATES_S3_BUCKET, AWS_ROLE_ARN (for upload-templates).
 
-image: atlassian/default-image:3
+image: amazon/aws-cli:latest
 
 definitions:
   steps:
