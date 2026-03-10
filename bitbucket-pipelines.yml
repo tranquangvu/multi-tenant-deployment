@@ -27,7 +27,7 @@ definitions:
             export TEMPLATES_S3_PREFIX="${TEMPLATES_S3_PREFIX:-cfn/templates}"
             ./scripts/upload-templates-to-s3.sh
 
-    - step: &deploy-main-base-stage
+    - step: &deploy-base-stage
         name: Deploy Base Stage (root stack)
         deployment: Production
         oidc: true
@@ -39,9 +39,9 @@ definitions:
           - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
           - export AWS_REGION="$AWS_DEFAULT_REGION"
           - ./scripts/upload-templates-to-s3.sh
-          - ./scripts/deploy-stack.sh mt-base-stage-main tenants/base/stage/main.yaml tenants/base/stage/params.json
+          - ./scripts/deploy-stack.sh mt-base-stage tenants/base/stage/main.yaml tenants/base/stage/params.json
 
-    - step: &deploy-main-base-prod
+    - step: &deploy-base-prod
         name: Deploy Base Production (root stack)
         deployment: Production
         trigger: manual
@@ -54,13 +54,13 @@ definitions:
           - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
           - export AWS_REGION="$AWS_DEFAULT_REGION"
           - ./scripts/upload-templates-to-s3.sh
-          - ./scripts/deploy-stack.sh mt-base-prod-main tenants/base/production/main.yaml tenants/base/production/params.json
+          - ./scripts/deploy-stack.sh mt-base-prod tenants/base/production/main.yaml tenants/base/production/params.json
 
 pipelines:
   branches:
     main:
-      - step: *deploy-main-base-stage
-      # - step: *deploy-main-base-prod
+      - step: *deploy-base-stage
+      # - step: *deploy-base-prod
 
   custom:
     # Upload CloudFormation templates to S3 only (no deploy)
@@ -90,7 +90,7 @@ pipelines:
               ENV_NAME="$DEPLOY_ENVIRONMENT"
               [[ "$ENV_NAME" == "prod" ]] && ENV_NAME="production"
               CFN_ENV="stage"; [[ "$ENV_NAME" == "production" ]] && CFN_ENV="prod"
-              ./scripts/deploy-stack.sh "mt-${DEPLOY_TENANT_ID}-${CFN_ENV}-main" "tenants/${DEPLOY_TENANT_ID}/${ENV_NAME}/main.yaml" "tenants/${DEPLOY_TENANT_ID}/${ENV_NAME}/params.json"
+              ./scripts/deploy-stack.sh "mt-${DEPLOY_TENANT_ID}-${CFN_ENV}" "tenants/${DEPLOY_TENANT_ID}/${ENV_NAME}/main.yaml" "tenants/${DEPLOY_TENANT_ID}/${ENV_NAME}/params.json"
 
     # Promote to multiple tenants (production only for abc/xyz)
     # Set AWS_ROLE_ARN (e.g. a role that can assume per-tenant roles, or one role per tenant via deployment).
@@ -119,6 +119,6 @@ pipelines:
                 echo "Deploying $t production..."
                 export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh "$t")"
                 export AWS_REGION="$AWS_DEFAULT_REGION"
-                ./scripts/deploy-stack.sh "mt-${t}-prod-main" "tenants/${t}/production/main.yaml" "tenants/${t}/production/params.json" || { echo "Failed $t"; exit 1; }
+                ./scripts/deploy-stack.sh "mt-${t}-prod" "tenants/${t}/production/main.yaml" "tenants/${t}/production/params.json" || { echo "Failed $t"; exit 1; }
               done
               echo "Promotion complete."

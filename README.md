@@ -47,10 +47,10 @@ tenants/
 
    ```bash
    export TEMPLATES_S3_BUCKET=your-cfn-templates-bucket
-   ./scripts/deploy-stack.sh mt-base-stage-main    tenants/base/stage/main.yaml    tenants/base/stage/params.json
-   ./scripts/deploy-stack.sh mt-base-prod-main     tenants/base/production/main.yaml tenants/base/production/params.json
-   ./scripts/deploy-stack.sh mt-abc-prod-main     tenants/abc/production/main.yaml tenants/abc/production/params.json
-   ./scripts/deploy-stack.sh mt-xyz-prod-main     tenants/xyz/production/main.yaml tenants/xyz/production/params.json
+   ./scripts/deploy-stack.sh mt-base-stage tenants/base/stage/main.yaml tenants/base/stage/params.json
+   ./scripts/deploy-stack.sh mt-base-prod tenants/base/production/main.yaml tenants/base/production/params.json
+   ./scripts/deploy-stack.sh mt-abc-prod tenants/abc/production/main.yaml tenants/abc/production/params.json
+   ./scripts/deploy-stack.sh mt-xyz-prod tenants/xyz/production/main.yaml tenants/xyz/production/params.json
    ```
 
    **deploy-stack.sh** accepts a template path (e.g. `tenants/base/stage/main.yaml`) or a template filename (e.g. `network.yaml` for `templates/`). It substitutes `\${TEMPLATES_S3_BUCKET}` in params from the environment.
@@ -59,7 +59,7 @@ When deploying a **root stack** manually, set the region from the tenant registr
 
 ```bash
 export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
-./scripts/deploy-stack.sh mt-base-stage-main tenants/base/stage/main.yaml tenants/base/stage/params.json
+./scripts/deploy-stack.sh mt-base-stage tenants/base/stage/main.yaml tenants/base/stage/params.json
 ```
 
 **deploy-tenant-env.sh** and the Bitbucket pipeline set `AWS_DEFAULT_REGION` from `config/tenant-registry.yaml` automatically for the tenant being deployed.
@@ -81,11 +81,11 @@ To deploy each module stack individually (templates from repo, no S3):
 ./scripts/deploy-tenants.sh
 ```
 
-Uses **`deploy-stack.sh`** and expects params in the old shape; for the new layout you use **`deploy-tenant-main.sh`** and S3 instead.
+Uses **`deploy-stack.sh`** and expects params in the old shape; for the new layout you use **`deploy-stack.sh`** with the root stack (e.g. `tenants/base/stage/main.yaml`) and S3 instead.
 
 ## Stack naming
 
-- **Root stack:** `{prefix}-{tenant-id}-{stage|prod}-main` (e.g. `mt-base-stage-main`, `mt-abc-prod-main`).
+- **Root stack:** `{prefix}-{tenant-id}-{stage|prod}` (e.g. `mt-base-stage`, `mt-abc-prod`).
 - **Nested stacks:** Created by the root stack with names assigned by CloudFormation (based on root stack name + logical ID).
 
 Prefix default: `mt` (override with `STACK_PREFIX`).
