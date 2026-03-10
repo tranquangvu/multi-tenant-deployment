@@ -37,14 +37,6 @@ Parameters:
     Type: String
     Default: "15"
     Description: PostgreSQL engine version. Override if not available in your region.
-  EnableDbInstance:
-    Type: String
-    Default: "false"
-    AllowedValues: ["true", "false"]
-    Description: Whether to create the actual RDS DBInstance (set to true to enable).
-
-Conditions:
-  CreateDbInstance: !Equals [!Ref EnableDbInstance, "true"]
 
 Resources:
   DbSubnetGroup:
@@ -69,7 +61,6 @@ Resources:
   DbInstance:
     Type: AWS::RDS::DBInstance
     DeletionPolicy: Snapshot
-    Condition: CreateDbInstance
     Properties:
       DBInstanceIdentifier: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-db"
       Engine: postgres
@@ -101,16 +92,16 @@ Resources:
 Outputs:
   DbEndpoint:
     Description: RDS endpoint hostname
-    Value: !If [CreateDbInstance, !GetAtt DbInstance.Endpoint.Address, "localhost"]
+    Value: !GetAtt DbInstance.Endpoint.Address
     Export:
       Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-DbEndpoint"
   DbPort:
     Description: RDS port
-    Value: !If [CreateDbInstance, !GetAtt DbInstance.Endpoint.Port, "5432"]
+    Value: !GetAtt DbInstance.Endpoint.Port
     Export:
       Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-DbPort"
   DbName:
     Description: RDS database name
-    Value: !If [CreateDbInstance, !Sub "${AppId}db", !Sub "${AppId}db"]
+    Value: !Sub "${AppId}db"
     Export:
       Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-DbName"
