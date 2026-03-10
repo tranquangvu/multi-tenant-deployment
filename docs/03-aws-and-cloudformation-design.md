@@ -90,7 +90,7 @@ Current layout (root stack per tenant/environment with nested stacks):
 │   └── alb.yaml
 ├── tenants/
 │   ├── base/
-│   │   └── stage/          # (or prod)
+│   │   └── staging/        # (or prod)
 │   │       ├── main.yaml   # root stack; nested stacks reference templates
 │   │       └── params.json
 │   └── <tenant-id>/

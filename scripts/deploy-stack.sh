@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deploy a single CloudFormation stack.
 # Usage: ./deploy-stack.sh <stack-name> <template-file-or-path> [params-file]
-#   Template: filename (e.g. network.yaml) for templates/, or path (e.g. tenants/base/stage/main.yaml) for root stack.
+#   Template: filename (e.g. network.yaml) for templates/, or path (e.g. tenants/base/staging/main.yaml) for root stack.
 #   Params: JSON array; ${TEMPLATES_S3_BUCKET} in values is replaced from env.
 set -euo pipefail
 

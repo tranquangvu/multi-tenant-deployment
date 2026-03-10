@@ -2,12 +2,12 @@
 # Deploy all modules for a (tenant, environment).
 # Order: network -> security -> secrets -> ecr -> ecs-cluster -> rds -> alb -> ecs-service (per app).
 # Usage: ./deploy-tenant-env.sh <tenant-id> <environment> [params-dir]
-# Base: stage or prod. Other tenants (abc, xyz): prod only.
-# Example: ./deploy-tenant-env.sh base stage  |  ./deploy-tenant-env.sh abc prod
+# Base: staging or prod. Other tenants (abc, xyz): prod only.
+# Example: ./deploy-tenant-env.sh base staging  |  ./deploy-tenant-env.sh abc prod
 set -euo pipefail
 
 TENANT_ID="${1:?Tenant ID required (base|abc|xyz)}"
-ENV="${2:?Environment required (stage|prod)}"
+ENV="${2:?Environment required (staging|prod)}"
 PARAMS_DIR="${3:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PREFIX="${STACK_PREFIX:-mt}"
@@ -17,15 +17,15 @@ export AWS_DEFAULT_REGION="$("$SCRIPT_DIR/get-tenant-region.sh" "$TENANT_ID")"
 export AWS_REGION="$AWS_DEFAULT_REGION"
 echo "Deploying to region: $AWS_DEFAULT_REGION"
 
-# Only base has stage; all other tenants (abc, xyz) have prod only
-if [[ "$TENANT_ID" != "base" && "$ENV" == "stage" ]]; then
-  echo "Only base tenant has a stage environment. Use prod for ${TENANT_ID}." >&2
+# Only base has staging; all other tenants (abc, xyz) have prod only
+if [[ "$TENANT_ID" != "base" && "$ENV" == "staging" ]]; then
+  echo "Only base tenant has a staging environment. Use prod for ${TENANT_ID}." >&2
   exit 1
 fi
 
-# Legacy deploy: use tenants/<id>/<stage|production>/params.json; only TenantId, Environment, StackPrefix passed to module templates
+# Legacy deploy: use tenants/<id>/<staging|production>/params.json; only TenantId, Environment, StackPrefix passed to module templates
 PARAMS_DIR="${PARAMS_DIR:-$SCRIPT_DIR/../tenants/${TENANT_ID}}"
-ENV_DIR="stage"
+ENV_DIR="staging"
 [[ "$ENV" == "prod" ]] && ENV_DIR="production"
 if [[ ! -f "$PARAMS_DIR/${ENV_DIR}/params.json" ]]; then
   echo "Parameters file not found: $PARAMS_DIR/${ENV_DIR}/params.json" >&2

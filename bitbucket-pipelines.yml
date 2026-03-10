@@ -1,6 +1,6 @@
 # Bitbucket Pipelines — Infrastructure repo (multi-tenant CloudFormation)
 # 1) Upload templates to S3  2) Deploy root stack (main.yaml) per tenant/env.
-# Base has stage + prod; other tenants (abc, xyz) have production only.
+# Base has staging + prod; other tenants (abc, xyz) have production only.
 # OIDC: set AWS_ROLE_ARN in each deployment environment (and repo var for upload-templates).
 # Repo variables: TEMPLATES_S3_BUCKET, AWS_ROLE_ARN (for upload-templates).
 
@@ -27,8 +27,8 @@ definitions:
             export TEMPLATES_S3_PREFIX="${TEMPLATES_S3_PREFIX:-cfn/templates}"
             ./scripts/upload-templates-to-s3.sh
 
-    - step: &deploy-base-stage
-        name: Deploy Base Stage (root stack)
+    - step: &deploy-base-staging
+        name: Deploy Base Staging (root stack)
         deployment: Production
         oidc: true
         script:
@@ -39,7 +39,7 @@ definitions:
           - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
           - export AWS_REGION="$AWS_DEFAULT_REGION"
           - ./scripts/upload-templates-to-s3.sh
-          - ./scripts/deploy-stack.sh mt-base-stage tenants/base/stage/main.yaml tenants/base/stage/params.json
+          - ./scripts/deploy-stack.sh mt-base-staging tenants/base/staging/main.yaml tenants/base/staging/params.json
 
     - step: &deploy-base-prod
         name: Deploy Base Production (root stack)
@@ -59,7 +59,7 @@ definitions:
 pipelines:
   branches:
     main:
-      - step: *deploy-base-stage
+      - step: *deploy-base-staging
       # - step: *deploy-base-prod
 
   custom:
@@ -67,14 +67,14 @@ pipelines:
     upload-templates:
       - step: *upload-templates
 
-    # Deploy root stack for one (tenant, environment). Base: stage or production; others: production only.
+    # Deploy root stack for one (tenant, environment). Base: staging or production; others: production only.
     # Set AWS_ROLE_ARN in repo vars or use a deployment env that matches the tenant/env.
     deploy-tenant:
       - variables:
           - name: DEPLOY_TENANT_ID
             default: base
           - name: DEPLOY_ENVIRONMENT
-            default: stage
+            default: staging
       - step:
           name: Upload templates then deploy $DEPLOY_TENANT_ID / $DEPLOY_ENVIRONMENT
           oidc: true
@@ -89,7 +89,7 @@ pipelines:
             - |
               ENV_NAME="$DEPLOY_ENVIRONMENT"
               [[ "$ENV_NAME" == "prod" ]] && ENV_NAME="production"
-              CFN_ENV="stage"; [[ "$ENV_NAME" == "production" ]] && CFN_ENV="prod"
+              CFN_ENV="staging"; [[ "$ENV_NAME" == "production" ]] && CFN_ENV="prod"
               ./scripts/deploy-stack.sh "mt-${DEPLOY_TENANT_ID}-${CFN_ENV}" "tenants/${DEPLOY_TENANT_ID}/${ENV_NAME}/main.yaml" "tenants/${DEPLOY_TENANT_ID}/${ENV_NAME}/params.json"
 
     # Promote to multiple tenants (production only for abc/xyz)

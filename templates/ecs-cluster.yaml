@@ -7,8 +7,8 @@ Parameters:
     Description: Tenant identifier (base, abc, xyz, ...)
   Environment:
     Type: String
-    AllowedValues: [stage, prod]
-    Description: Environment (stage or prod)
+    AllowedValues: [staging, prod]
+    Description: Environment (staging or prod)
   StackPrefix:
     Type: String
     Default: mt
