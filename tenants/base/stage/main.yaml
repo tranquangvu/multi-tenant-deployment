@@ -168,7 +168,7 @@ Resources:
       - EcrFooAppStack
       - AlbStack
       - EcsClusterStack
-      - RdsFooAppStack
+      # - RdsFooAppStack
     Properties:
       TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecs-service.yaml"
       Parameters:
@@ -178,9 +178,12 @@ Resources:
         EcrRepoUri: !GetAtt EcrFooAppStack.Outputs.EcrRepoUri
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupFooArn
         DesiredCount: !Ref FooAppDesiredCount
-        DbEndpoint: !GetAtt RdsFooAppStack.Outputs.DbEndpoint
-        DbPort: !GetAtt RdsFooAppStack.Outputs.DbPort
-        DbName: !GetAtt RdsFooAppStack.Outputs.DbName
+        # DbEndpoint: !GetAtt RdsFooAppStack.Outputs.DbEndpoint
+        # DbPort: !GetAtt RdsFooAppStack.Outputs.DbPort
+        # DbName: !GetAtt RdsFooAppStack.Outputs.DbName
+        DbEndpoint: ""
+        DbPort: ""
+        DbName: ""
         AppId: foo
         AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
 
@@ -190,7 +193,7 @@ Resources:
       - EcrBazAppStack
       - AlbStack
       - EcsClusterStack
-      - RdsBazAppStack
+      # - RdsBazAppStack
     Properties:
       TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecs-service.yaml"
       Parameters:
@@ -200,9 +203,12 @@ Resources:
         EcrRepoUri: !GetAtt EcrBazAppStack.Outputs.EcrRepoUri
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazArn
         DesiredCount: !Ref BazAppDesiredCount
-        DbEndpoint: !GetAtt RdsBazAppStack.Outputs.DbEndpoint
-        DbPort: !GetAtt RdsBazAppStack.Outputs.DbPort
-        DbName: !GetAtt RdsBazAppStack.Outputs.DbName
+        # DbEndpoint: !GetAtt RdsBazAppStack.Outputs.DbEndpoint
+        # DbPort: !GetAtt RdsBazAppStack.Outputs.DbPort
+        # DbName: !GetAtt RdsBazAppStack.Outputs.DbName
+        DbEndpoint: ""
+        DbPort: ""
+        DbName: ""
         AppId: baz
         AppSecretArn: !GetAtt SecretsBazAppStack.Outputs.AppSecretArn
 

@@ -69,24 +69,29 @@ done
 deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-ecs-cluster" "ecs-cluster.yaml" "$BASE_PARAMS"
 
 # 6. RDS per app
-for app in foo baz; do
-  APP_SECRET_ARN=$(aws cloudformation describe-stacks \
-    --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-secrets-${app}" \
-    --query "Stacks[0].Outputs[?OutputKey=='AppSecretArn'].OutputValue | [0]" \
-    --output text)
-  PARAMS_DATA="/tmp/${TENANT_ID}-${ENV}-rds-${app}-params.json"
-  jq --arg app "$app" --arg arn "$APP_SECRET_ARN" \
-    '. + [
-      {"ParameterKey": "AppId", "ParameterValue": $app},
-      {"ParameterKey": "AppSecretArn", "ParameterValue": $arn}
-    ]' "$BASE_PARAMS" > "$PARAMS_DATA"
-  deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-rds-${app}" "rds.yaml" "$PARAMS_DATA"
-done
+# Set SKIP_RDS=1 to skip creating RDS stacks (useful while debugging ECS only).
+if [[ "${SKIP_RDS:-0}" != "1" ]]; then
+  for app in foo baz; do
+    APP_SECRET_ARN=$(aws cloudformation describe-stacks \
+      --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-secrets-${app}" \
+      --query "Stacks[0].Outputs[?OutputKey=='AppSecretArn'].OutputValue | [0]" \
+      --output text)
+    PARAMS_DATA="/tmp/${TENANT_ID}-${ENV}-rds-${app}-params.json"
+    jq --arg app "$app" --arg arn "$APP_SECRET_ARN" \
+      '. + [
+        {"ParameterKey": "AppId", "ParameterValue": $app},
+        {"ParameterKey": "AppSecretArn", "ParameterValue": $arn}
+      ]' "$BASE_PARAMS" > "$PARAMS_DATA"
+    deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-rds-${app}" "rds.yaml" "$PARAMS_DATA"
+  done
+else
+  echo "SKIP_RDS=1 set; skipping RDS stacks for foo and baz."
+fi
 
 # 7. ALB
 deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-alb" "alb.yaml" "$BASE_PARAMS"
 
-# 8. ECS service per app (with ECR URI, target group, RDS endpoint/port, app secret for DB credentials)
+# 8. ECS service per app (with ECR URI, target group, RDS endpoint/port when enabled, app secret for DB credentials)
 for app in foo baz; do
   ECR_URI=$(aws cloudformation describe-stacks \
     --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-ecr-${app}" \
@@ -96,18 +101,26 @@ for app in foo baz; do
     --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-secrets-${app}" \
     --query "Stacks[0].Outputs[?OutputKey=='AppSecretArn'].OutputValue | [0]" \
     --output text)
-  DB_ENDPOINT=$(aws cloudformation describe-stacks \
-    --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-rds-${app}" \
-    --query "Stacks[0].Outputs[?OutputKey=='DbEndpoint'].OutputValue | [0]" \
-    --output text)
-  DB_PORT=$(aws cloudformation describe-stacks \
-    --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-rds-${app}" \
-    --query "Stacks[0].Outputs[?OutputKey=='DbPort'].OutputValue | [0]" \
-    --output text)
-  DB_NAME=$(aws cloudformation describe-stacks \
-    --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-rds-${app}" \
-    --query "Stacks[0].Outputs[?OutputKey=='DbName'].OutputValue | [0]" \
-    --output text)
+  if [[ "${SKIP_RDS:-0}" != "1" ]]; then
+    DB_ENDPOINT=$(aws cloudformation describe-stacks \
+      --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-rds-${app}" \
+      --query "Stacks[0].Outputs[?OutputKey=='DbEndpoint'].OutputValue | [0]" \
+      --output text)
+    DB_PORT=$(aws cloudformation describe-stacks \
+      --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-rds-${app}" \
+      --query "Stacks[0].Outputs[?OutputKey=='DbPort'].OutputValue | [0]" \
+      --output text)
+    DB_NAME=$(aws cloudformation describe-stacks \
+      --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-rds-${app}" \
+      --query "Stacks[0].Outputs[?OutputKey=='DbName'].OutputValue | [0]" \
+      --output text)
+  else
+    # Placeholder DB values when RDS is skipped; ECS will deploy but app DB connections will fail until RDS exists.
+    DB_ENDPOINT="localhost"
+    DB_PORT="5432"
+    DB_NAME="${app}db"
+    echo "SKIP_RDS=1 set; using placeholder DB values for app $app (no RDS stacks)."
+  fi
   if [[ "$app" == "foo" ]]; then
     TG_KEY="TargetGroupFooArn"
   else
