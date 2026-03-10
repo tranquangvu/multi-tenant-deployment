@@ -162,6 +162,7 @@ Resources:
       - EcrFooAppStack
       - AlbStack
       - EcsClusterStack
+      - RdsFooAppStack
     Properties:
       TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecs-service.yaml"
       Parameters:
@@ -171,7 +172,11 @@ Resources:
         EcrRepoUri: !GetAtt EcrFooAppStack.Outputs.EcrRepoUri
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupFooAppArn
         DesiredCount: !Ref FooAppDesiredCount
+        DbEndpoint: !GetAtt RdsFooAppStack.Outputs.DbEndpoint
+        DbPort: !GetAtt RdsFooAppStack.Outputs.DbPort
+        DbName: !GetAtt RdsFooAppStack.Outputs.DbName
         AppId: foo
+        AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
 
   EcsBazAppStack:
     Type: AWS::CloudFormation::Stack
@@ -179,6 +184,7 @@ Resources:
       - EcrBazAppStack
       - AlbStack
       - EcsClusterStack
+      - RdsBazAppStack
     Properties:
       TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecs-service.yaml"
       Parameters:
@@ -188,7 +194,11 @@ Resources:
         EcrRepoUri: !GetAtt EcrBazAppStack.Outputs.EcrRepoUri
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazAppArn
         DesiredCount: !Ref BazAppDesiredCount
+        DbEndpoint: !GetAtt RdsBazAppStack.Outputs.DbEndpoint
+        DbPort: !GetAtt RdsBazAppStack.Outputs.DbPort
+        DbName: !GetAtt RdsBazAppStack.Outputs.DbName
         AppId: baz
+        AppSecretArn: !GetAtt SecretsBazAppStack.Outputs.AppSecretArn
 
 Outputs:
   NetworkStackId:

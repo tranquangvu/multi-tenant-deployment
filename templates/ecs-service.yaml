@@ -23,9 +23,19 @@ Parameters:
     Type: String
     Default: ""
     Description: "(Optional) ALB target group ARN to attach this service to. Leave empty for no ALB."
+  DbEndpoint:
+    Type: String
+    Description: RDS endpoint hostname (from RDS module output DbEndpoint). Used to build DATABASE_* env vars.
+  DbPort:
+    Type: String
+    Default: "5432"
+    Description: RDS port (from RDS module output DbPort).
+  DbName:
+    Type: String
+    Description: RDS database name (from RDS module output DbName).
   AppSecretArn:
     Type: String
-    Description: ARN of the app secret (from secrets module for this app). Used to inject DATABASE_URL and other env vars.
+    Description: ARN of the app secret (from secrets module). Used for DATABASE_USER and DATABASE_PASSWORD only.
   AppCpu:
     Type: String
     Default: "256"
@@ -126,9 +136,19 @@ Resources:
             Timeout: 5
             Retries: 2
             StartPeriod: 60
+          # RDS connection from stack outputs; app can build DATABASE_URL as postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}
+          Environment:
+            - Name: DATABASE_HOST
+              Value: !Ref DbEndpoint
+            - Name: DATABASE_PORT
+              Value: !Ref DbPort
+            - Name: DATABASE_NAME
+              Value: !Ref DbName
           Secrets:
-            - Name: DATABASE_URL
-              ValueFrom: !Sub "${AppSecretArn}:DATABASE_URL::"
+            - Name: DATABASE_USER
+              ValueFrom: !Sub "${AppSecretArn}:username::"
+            - Name: DATABASE_PASSWORD
+              ValueFrom: !Sub "${AppSecretArn}:password::"
 
   Service:
     Type: AWS::ECS::Service

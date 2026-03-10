@@ -86,7 +86,7 @@ done
 # 7. ALB
 deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-alb" "alb.yaml" "$BASE_PARAMS"
 
-# 8. ECS service per app (with ECR URI, target group, app secret for DATABASE_URL and other env vars)
+# 8. ECS service per app (with ECR URI, target group, RDS endpoint/port, app secret for DB credentials)
 for app in foo baz; do
   ECR_URI=$(aws cloudformation describe-stacks \
     --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-ecr-${app}" \
@@ -95,6 +95,18 @@ for app in foo baz; do
   APP_SECRET_ARN=$(aws cloudformation describe-stacks \
     --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-secrets-${app}" \
     --query "Stacks[0].Outputs[?OutputKey=='AppSecretArn'].OutputValue | [0]" \
+    --output text)
+  DB_ENDPOINT=$(aws cloudformation describe-stacks \
+    --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-rds-${app}" \
+    --query "Stacks[0].Outputs[?OutputKey=='DbEndpoint'].OutputValue | [0]" \
+    --output text)
+  DB_PORT=$(aws cloudformation describe-stacks \
+    --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-rds-${app}" \
+    --query "Stacks[0].Outputs[?OutputKey=='DbPort'].OutputValue | [0]" \
+    --output text)
+  DB_NAME=$(aws cloudformation describe-stacks \
+    --stack-name "${PREFIX}-${TENANT_ID}-${ENV}-rds-${app}" \
+    --query "Stacks[0].Outputs[?OutputKey=='DbName'].OutputValue | [0]" \
     --output text)
   if [[ "$app" == "foo" ]]; then
     TG_KEY="TargetGroupFooArn"
@@ -111,11 +123,17 @@ for app in foo baz; do
     --arg uri "$ECR_URI" \
     --arg tg "$TG_ARN" \
     --arg appSecret "$APP_SECRET_ARN" \
+    --arg dbEndpoint "$DB_ENDPOINT" \
+    --arg dbPort "$DB_PORT" \
+    --arg dbName "$DB_NAME" \
     --slurpfile b "$BASE_PARAMS" \
     '($b[0] // []) + [
       {"ParameterKey": "AppId", "ParameterValue": $app},
       {"ParameterKey": "EcrRepoUri", "ParameterValue": $uri},
       {"ParameterKey": "TargetGroupArn", "ParameterValue": $tg},
+      {"ParameterKey": "DbEndpoint", "ParameterValue": $dbEndpoint},
+      {"ParameterKey": "DbPort", "ParameterValue": $dbPort},
+      {"ParameterKey": "DbName", "ParameterValue": $dbName},
       {"ParameterKey": "AppSecretArn", "ParameterValue": $appSecret}
     ]' > "$PARAMS_ECS"
   deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-ecs-${app}" "ecs-service.yaml" "$PARAMS_ECS"

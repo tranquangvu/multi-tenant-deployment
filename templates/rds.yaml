@@ -100,3 +100,8 @@ Outputs:
     Value: !GetAtt DbInstance.Endpoint.Port
     Export:
       Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-DbPort"
+  DbName:
+    Description: RDS database name
+    Value: !Sub "${AppId}-db"
+    Export:
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-DbName"
