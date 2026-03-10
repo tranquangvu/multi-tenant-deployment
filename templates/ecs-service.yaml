@@ -127,6 +127,7 @@ Resources:
             Options:
               awslogs-group: !Ref LogGroup
               awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: !Ref AppId
           PortMappings:
             - ContainerPort: 8080
               Protocol: tcp
