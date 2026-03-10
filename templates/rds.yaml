@@ -35,8 +35,8 @@ Parameters:
     Description: ARN of the app secret (from secrets module for this app)
   EngineVersion:
     Type: String
-    Default: "15.5"
-    Description: PostgreSQL engine version (e.g. 15.5, 16.1). Override if not available in your region.
+    Default: "15"
+    Description: PostgreSQL engine version. Override if not available in your region.
 
 Resources:
   DbSubnetGroup:
@@ -67,7 +67,8 @@ Resources:
       EngineVersion: !Ref EngineVersion
       DBInstanceClass: !Ref DbInstanceClass
       AllocatedStorage: !Ref DbAllocatedStorage
-      DBName: appdb
+      StorageType: gp3
+      DBName: !Sub "${ApplicationId}-db"
       MasterUsername: !Sub "{{resolve:secretsmanager:${AppSecretArn}:SecretString:username}}"
       MasterUserPassword: !Sub "{{resolve:secretsmanager:${AppSecretArn}:SecretString:password}}"
       DBSubnetGroupName: !Ref DbSubnetGroup
