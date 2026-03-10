@@ -53,7 +53,7 @@ for app in foo baz; do
   PARAMS_APP="$PARAMS_DIR/${TENANT_ID}-${ENV}-params-${app}.json"
   if [[ ! -f "$PARAMS_APP" ]]; then
     PARAMS_APP="/tmp/${TENANT_ID}-${ENV}-${app}-params.json"
-    jq --arg app "$app" '. + [{"ParameterKey": "ApplicationId", "ParameterValue": $app}]' "$BASE_PARAMS" > "$PARAMS_APP"
+    jq --arg app "$app" '. + [{"ParameterKey": "AppId", "ParameterValue": $app}]' "$BASE_PARAMS" > "$PARAMS_APP"
   fi
   deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-secrets-${app}" "secrets.yaml" "$PARAMS_APP"
 done
@@ -61,7 +61,7 @@ done
 # 4. ECR per app
 for app in foo baz; do
   PARAMS_APP="/tmp/${TENANT_ID}-${ENV}-ecr-${app}-params.json"
-  jq --arg app "$app" '. + [{"ParameterKey": "ApplicationId", "ParameterValue": $app}]' "$BASE_PARAMS" > "$PARAMS_APP"
+  jq --arg app "$app" '. + [{"ParameterKey": "AppId", "ParameterValue": $app}]' "$BASE_PARAMS" > "$PARAMS_APP"
   deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-ecr-${app}" "ecr.yaml" "$PARAMS_APP"
 done
 
@@ -77,7 +77,7 @@ for app in foo baz; do
   PARAMS_DATA="/tmp/${TENANT_ID}-${ENV}-rds-${app}-params.json"
   jq --arg app "$app" --arg arn "$APP_SECRET_ARN" \
     '. + [
-      {"ParameterKey": "ApplicationId", "ParameterValue": $app},
+      {"ParameterKey": "AppId", "ParameterValue": $app},
       {"ParameterKey": "AppSecretArn", "ParameterValue": $arn}
     ]' "$BASE_PARAMS" > "$PARAMS_DATA"
   deploy_stack "${PREFIX}-${TENANT_ID}-${ENV}-rds-${app}" "rds.yaml" "$PARAMS_DATA"
@@ -113,7 +113,7 @@ for app in foo baz; do
     --arg appSecret "$APP_SECRET_ARN" \
     --slurpfile b "$BASE_PARAMS" \
     '($b[0] // []) + [
-      {"ParameterKey": "ApplicationId", "ParameterValue": $app},
+      {"ParameterKey": "AppId", "ParameterValue": $app},
       {"ParameterKey": "EcrRepoUri", "ParameterValue": $uri},
       {"ParameterKey": "TargetGroupArn", "ParameterValue": $tg},
       {"ParameterKey": "AppSecretArn", "ParameterValue": $appSecret}

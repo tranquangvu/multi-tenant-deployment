@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Module: ECS service - Fargate service and task definition per app. One per (TenantId, Environment, ApplicationId)."
+Description: "Module: ECS service - Fargate service and task definition per app. One per (TenantId, Environment, AppId)."
 
 Parameters:
   TenantId:
@@ -9,7 +9,7 @@ Parameters:
     Type: String
     AllowedValues: [stage, prod]
     Description: Environment (stage or prod)
-  ApplicationId:
+  AppId:
     Type: String
     Description: Application ID (foo, baz)
   StackPrefix:
@@ -48,7 +48,7 @@ Resources:
   TaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-exec-role"
+      RoleName: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-exec-role"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -63,13 +63,13 @@ Resources:
           Value: !Ref TenantId
         - Key: Environment
           Value: !Ref Environment
-        - Key: ApplicationId
-          Value: !Ref ApplicationId
+        - Key: AppId
+          Value: !Ref AppId
 
   TaskRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-task-role"
+      RoleName: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-task-role"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -82,26 +82,26 @@ Resources:
           Value: !Ref TenantId
         - Key: Environment
           Value: !Ref Environment
-        - Key: ApplicationId
-          Value: !Ref ApplicationId
+        - Key: AppId
+          Value: !Ref AppId
 
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/ecs/${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}"
+      LogGroupName: !Sub "/ecs/${StackPrefix}-${TenantId}-${Environment}-${AppId}"
       RetentionInDays: 30
       Tags:
         - Key: TenantId
           Value: !Ref TenantId
         - Key: Environment
           Value: !Ref Environment
-        - Key: ApplicationId
-          Value: !Ref ApplicationId
+        - Key: AppId
+          Value: !Ref AppId
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}"
+      Family: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}"
       NetworkMode: awsvpc
       RequiresCompatibilities: [FARGATE]
       Cpu: !Ref AppCpu
@@ -109,7 +109,7 @@ Resources:
       ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
       TaskRoleArn: !GetAtt TaskRole.Arn
       ContainerDefinitions:
-        - Name: !Ref ApplicationId
+        - Name: !Ref AppId
           Image: !Sub "${EcrRepoUri}:latest"
           Essential: true
           LogConfiguration:
@@ -134,7 +134,7 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn: TaskDefinition
     Properties:
-      ServiceName: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-svc"
+      ServiceName: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-svc"
       Cluster: !ImportValue
         Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-ClusterName"
       TaskDefinition: !Ref TaskDefinition
@@ -155,7 +155,7 @@ Resources:
       LoadBalancers: !If
         - HasTargetGroup
         - - TargetGroupArn: !Ref TargetGroupArn
-            ContainerName: !Ref ApplicationId
+            ContainerName: !Ref AppId
             ContainerPort: 8080
         - !Ref "AWS::NoValue"
 
@@ -164,9 +164,9 @@ Outputs:
     Description: ECS service name
     Value: !GetAtt Service.Name
     Export:
-      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-ServiceName"
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-ServiceName"
   LogGroupName:
     Description: CloudWatch log group for app
     Value: !Ref LogGroup
     Export:
-      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${ApplicationId}-LogGroupName"
+      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-LogGroupName"

@@ -139,7 +139,7 @@ applications:
 
 ### 4.5 Resources Within AWS
 
-- **Resource tags**: Enforce `TenantId`, `ApplicationId`, `Environment`, `ManagedBy=CloudFormation`.
+- **Resource tags**: Enforce `TenantId`, `AppId`, `Environment`, `ManagedBy=CloudFormation`.
 - **Names**: `{tenant-id}-{app-id}-{resource-type}` e.g. `base-app1-rds`, `tenant-a-app2-s3-bucket`.
 
 ## 5. Definition of Done (ST-156)

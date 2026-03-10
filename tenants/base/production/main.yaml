@@ -77,7 +77,7 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        ApplicationId: foo
+        AppId: foo
 
   SecretsBazAppStack:
     Type: AWS::CloudFormation::Stack
@@ -88,7 +88,7 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        ApplicationId: baz
+        AppId: baz
 
   EcrFooAppStack:
     Type: AWS::CloudFormation::Stack
@@ -99,7 +99,7 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        ApplicationId: foo
+        AppId: foo
 
   EcrBazAppStack:
     Type: AWS::CloudFormation::Stack
@@ -110,7 +110,7 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        ApplicationId: baz
+        AppId: baz
 
   EcsClusterStack:
     Type: AWS::CloudFormation::Stack
@@ -131,8 +131,8 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        ApplicationId: foo
         AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
+        AppId: foo
 
   RdsBazAppStack:
     Type: AWS::CloudFormation::Stack
@@ -143,8 +143,8 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        ApplicationId: baz
         AppSecretArn: !GetAtt SecretsBazAppStack.Outputs.AppSecretArn
+        AppId: baz
 
   AlbStack:
     Type: AWS::CloudFormation::Stack
@@ -168,10 +168,10 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        ApplicationId: foo
         EcrRepoUri: !GetAtt EcrFooAppStack.Outputs.EcrRepoUri
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupFooAppArn
         DesiredCount: !Ref FooAppDesiredCount
+        AppId: foo
 
   EcsBazAppStack:
     Type: AWS::CloudFormation::Stack
@@ -185,10 +185,10 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        ApplicationId: baz
         EcrRepoUri: !GetAtt EcrBazAppStack.Outputs.EcrRepoUri
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazAppArn
         DesiredCount: !Ref BazAppDesiredCount
+        AppId: baz
 
 Outputs:
   NetworkStackId:

@@ -77,7 +77,7 @@ Resources:
           Value: !Ref TenantId
         - Key: Environment
           Value: !Ref Environment
-        - Key: ApplicationId
+        - Key: AppId
           Value: foo
 
   TargetGroupBaz:
@@ -97,7 +97,7 @@ Resources:
           Value: !Ref TenantId
         - Key: Environment
           Value: !Ref Environment
-        - Key: ApplicationId
+        - Key: AppId
           Value: baz
 
   Listener:

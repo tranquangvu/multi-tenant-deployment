@@ -59,7 +59,7 @@ For each tenant (including base), use a small set of stacks:
 ### 3.3 Parameter Strategy
 
 - **Required parameters**: `TenantId`, `Environment`, `AWSRegion` (and optionally `AWSAccountId` for cross-account).
-- **Per-application**: `ApplicationId` for app-level stacks.
+- **Per-application**: `AppId` for app-level stacks.
 - **Secrets**: Do not store secrets in template; use Secrets Manager ARNs or Parameter Store names as parameters, or resolve in pipeline and pass as parameter overrides.
 
 ### 3.4 Nested vs Flat Stacks
