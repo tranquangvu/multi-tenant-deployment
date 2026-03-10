@@ -6,7 +6,7 @@ This document defines the multi-tenant structure: base tenant, silo tenants, met
 
 - **Base tenant (foundation)**: Single environment used for first deployment and validation. All code and infrastructure changes deploy here first.
 - **Silo tenants**: Each tenant has isolated environments per application — own database, configuration, and secrets. No shared runtime state between tenants.
-- **7 applications**: Each app has one environment per tenant (base + N tenants). Deployments are validated in base, then promoted to selected tenants.
+- **Applications**: Each app has one environment per tenant (base + N tenants). Current implementation: 2 apps (foo, baz). Deployments are validated in base, then promoted to selected tenants.
 
 ```
                     ┌─────────────────────────────────────────────────────────┐
@@ -21,7 +21,7 @@ This document defines the multi-tenant structure: base tenant, silo tenants, met
 │  Base Tenant  │                     │  Tenant A       │                     │  Tenant B … N   │
 │  (Foundation) │                     │  (Silo)         │                     │  (Silo)         │
 ├───────────────┤                     ├─────────────────┤                     ├─────────────────┤
-│ App1 … App7   │                     │ App1 … App7     │                     │ App1 … App7     │
+│ Apps (foo, baz) │                    │ Apps (foo, baz) │                    │ Apps (foo, baz) │
 │ DB, config,  │                     │ DB, config,     │                     │ DB, config,     │
 │ secrets each  │                     │ secrets each    │                     │ secrets each    │
 └───────┬───────┘                     └────────┬────────┘                     └────────┬────────┘
@@ -96,18 +96,17 @@ Optional extensions (for promotion and versioning):
 
 ## 3. App-to-Tenant Mapping
 
-- Each of the **7 applications** has one environment per tenant.
+- Each application has one environment per tenant. The current implementation uses **2 applications** (foo, baz), defined in `config/apps-registry.yaml`; the design supports adding more.
 - Mapping is implicit: **App × Tenant** = one environment (one DB, one config, one set of secrets).
 - Document the list of application IDs in the same config repo, e.g.:
 
 ```yaml
-# apps-registry.yaml (optional, or in same file as tenant-registry)
+# config/apps-registry.yaml
 applications:
-  - id: app1
-    name: Application One
-  - id: app2
-    name: Application Two
-  # ... app3 .. app7
+  - id: foo
+    name: FooApp
+  - id: baz
+    name: BazApp
 ```
 
 - Deployment matrix: for each promotion run, pipeline reads `tenant-registry.yaml` and optionally `apps-registry.yaml` to decide target tenants (and which apps to deploy where).
@@ -122,8 +121,8 @@ applications:
 
 ### 4.2 CloudFormation Stacks
 
-- **Base tenant**: `{stack-prefix}-base-{layer}` e.g. `mt-base-network`, `mt-base-app1`.
-- **Per tenant**: `{stack-prefix}-{tenant-id}-{layer}` e.g. `mt-tenant-a-network`, `mt-tenant-a-app1`.
+- **Base tenant**: `{stack-prefix}-base-{layer}` e.g. `mt-base-network`, `mt-base-foo` (or per-app stack).
+- **Per tenant**: `{stack-prefix}-{tenant-id}-{layer}` e.g. `mt-abc-network`, `mt-abc-foo`.
 - **Shared (if any)**: `{stack-prefix}-shared-{purpose}`.
 
 ### 4.3 Bitbucket Repositories
@@ -140,7 +139,7 @@ applications:
 ### 4.5 Resources Within AWS
 
 - **Resource tags**: Enforce `TenantId`, `AppId`, `Environment`, `ManagedBy=CloudFormation`.
-- **Names**: `{tenant-id}-{app-id}-{resource-type}` e.g. `base-app1-rds`, `tenant-a-app2-s3-bucket`.
+- **Names**: `{tenant-id}-{app-id}-{resource-type}` e.g. `base-foo-rds`, `tenant-a-baz-s3-bucket`.
 
 ## 5. Definition of Done (ST-156)
 

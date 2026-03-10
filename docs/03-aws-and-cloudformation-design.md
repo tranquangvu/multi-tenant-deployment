@@ -45,15 +45,18 @@ Recommendation: Prefer **Option A** for production and compliance; use **Option 
 
 For each tenant (including base), use a small set of stacks:
 
-| Layer | Stack name pattern | Contents |
-|-------|--------------------|----------|
-| Network | `{prefix}-{tenant-id}-network` | VPC, subnets, NAT, VPC endpoints. |
-| Security | `{prefix}-{tenant-id}-security` | IAM roles, security groups, KMS (optional). |
-| Secrets | `{prefix}-{tenant-id}-secrets` | Secrets Manager (or Parameter Store) placeholders. |
-| Data (per app or shared) | `{prefix}-{tenant-id}-app{N}-data` or `-data` | RDS, ElastiCache, etc. |
-| Compute (per app) | `{prefix}-{tenant-id}-app{N}-compute` | ECS cluster/service, Lambda, etc. |
+| Layer | Stack name pattern | Template | Contents |
+|-------|--------------------|----------|----------|
+| Network | `{prefix}-{tenant-id}-network` | `network.yaml` | VPC, subnets, NAT, VPC endpoints. |
+| Security | `{prefix}-{tenant-id}-security` | `security.yaml` | IAM roles, security groups, KMS (optional). |
+| Secrets | per app | `secrets.yaml` | Secrets Manager (or Parameter Store) placeholders. |
+| Data (per app) | e.g. RdsFooAppStack | `rds.yaml` | RDS per app. |
+| ECR | per app | `ecr.yaml` | ECR repository per app. |
+| ECS cluster | shared per tenant/env | `ecs-cluster.yaml` | ECS cluster. |
+| Compute (per app) | e.g. EcsFooAppStack | `ecs-service.yaml` | ECS Fargate service per app. |
+| ALB | shared per tenant/env | `alb.yaml` | Application Load Balancer. |
 
-- **Base tenant**: `tenant-id = base`; same template set.
+- **Base tenant**: `tenant-id = base`; same template set. Current implementation uses a **root stack** (`tenants/<tenant-id>/<env>/main.yaml`) that deploys these as nested stacks.
 - **Pipeline**: For each target tenant, assume role in that account and run `aws cloudformation deploy` (or create/update stack) with the same template and tenant-specific parameters.
 
 ### 3.3 Parameter Strategy
@@ -70,25 +73,38 @@ For each tenant (including base), use a small set of stacks:
 
 ### 3.5 Directory Layout (IaC Repo)
 
+Current layout (root stack per tenant/environment with nested stacks):
+
 ```
-infrastructure/   (or cloudformation/)
+├── config/
+│   ├── tenant-registry.yaml
+│   └── apps-registry.yaml
 ├── templates/
 │   ├── network.yaml
 │   ├── security.yaml
 │   ├── secrets.yaml
-│   ├── data-app.yaml      # e.g. RDS per app
-│   └── compute-app.yaml   # e.g. ECS/Lambda per app
-├── parameters/
+│   ├── rds.yaml            # RDS per app
+│   ├── ecr.yaml
+│   ├── ecs-cluster.yaml
+│   ├── ecs-service.yaml    # ECS Fargate service per app
+│   └── alb.yaml
+├── tenants/
 │   ├── base/
-│   │   └── base-params.json
-│   └── tenants/
-│       ├── tenant-a-params.json
-│       └── ...
+│   │   └── stage/          # (or prod)
+│   │       ├── main.yaml   # root stack; nested stacks reference templates
+│   │       └── params.json
+│   └── <tenant-id>/
+│       └── production/
+│           ├── main.yaml
+│           └── params.json
 ├── scripts/
 │   ├── deploy-stack.sh
-│   └── destroy-stack.sh
+│   ├── deploy-tenant-env.sh
+│   ├── deploy-tenants.sh
+│   ├── upload-templates-to-s3.sh
+│   └── get-tenant-region.sh
 └── docs/
-    └── (link to ./docs in repo root)
+    └── (this documentation)
 ```
 
 ## 4. Base Tenant Resources (Checklist)

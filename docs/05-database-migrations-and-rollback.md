@@ -66,7 +66,7 @@ This document covers **Flyway** for database migrations (ST-158) and **per-tenan
 
 ### 2.3 Rollback Pipeline / Scripts
 
-- **Scripts**: e.g. `scripts/rollback-tenant.sh <tenant-id> [target-version]` that:
+- **Scripts**: e.g. `scripts/rollback-tenant.sh <tenant-id> [target-version]` (to be implemented) that:
   1. Looks up previous (or target) artifact version.
   2. Deploys that version to the tenant (CloudFormation if needed, then app deploy).
   3. For DB: either trigger RDS restore from snapshot (manual or automated) or run Flyway undo if in use.

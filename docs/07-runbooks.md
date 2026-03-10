@@ -44,8 +44,7 @@ Short operational procedures for the multi-tenant deployment framework. Assumes 
 **Steps**:
 1. Identify **tenant ID** and, if needed, **target version** (e.g. previous app version).
 2. Run rollback script or pipeline:
-   - From repo: `./scripts/rollback-tenant.sh <tenant-id> [target-version]`
-   - Or use a dedicated “Rollback” pipeline with variables for tenant and version.
+   - A dedicated `scripts/rollback-tenant.sh` is not yet implemented; redeploy the previous app version using `scripts/deploy-tenant-env.sh` with the target tenant and version/parameters, or use a "Rollback" pipeline with variables for tenant and version when available.
 3. Script/pipeline will:
    - Deploy previous (or specified) app version to that tenant.
    - If DB rollback is required: follow DB runbook (RDS restore from snapshot or Flyway undo).
