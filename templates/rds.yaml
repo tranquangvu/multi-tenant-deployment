@@ -68,7 +68,7 @@ Resources:
       DBInstanceClass: !Ref DbInstanceClass
       AllocatedStorage: !Ref DbAllocatedStorage
       StorageType: gp3
-      DBName: !Sub "${AppId}-db"
+      DBName: !Sub "${AppId}db"
       MasterUsername: !Sub "{{resolve:secretsmanager:${AppSecretArn}:SecretString:username}}"
       MasterUserPassword: !Sub "{{resolve:secretsmanager:${AppSecretArn}:SecretString:password}}"
       DBSubnetGroupName: !Ref DbSubnetGroup
@@ -102,6 +102,6 @@ Outputs:
       Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-DbPort"
   DbName:
     Description: RDS database name
-    Value: !Sub "${AppId}-db"
+    Value: !Sub "${AppId}db"
     Export:
       Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-DbName"
