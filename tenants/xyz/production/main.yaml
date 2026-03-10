@@ -170,7 +170,7 @@ Resources:
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
         EcrRepoUri: !GetAtt EcrFooAppStack.Outputs.EcrRepoUri
-        TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupFooAppArn
+        TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupFooArn
         DesiredCount: !Ref FooAppDesiredCount
         DbEndpoint: !GetAtt RdsFooAppStack.Outputs.DbEndpoint
         DbPort: !GetAtt RdsFooAppStack.Outputs.DbPort
@@ -192,7 +192,7 @@ Resources:
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
         EcrRepoUri: !GetAtt EcrBazAppStack.Outputs.EcrRepoUri
-        TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazAppArn
+        TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazArn
         DesiredCount: !Ref BazAppDesiredCount
         DbEndpoint: !GetAtt RdsBazAppStack.Outputs.DbEndpoint
         DbPort: !GetAtt RdsBazAppStack.Outputs.DbPort
