@@ -65,12 +65,12 @@ This document describes the CI/CD design using **Bitbucket Pipelines** for base-
 
 The promote stage must support:
 
-- **Single tenant**: e.g. pipeline variable `PROMOTE_TENANTS=tenant-a`
-- **Multiple tenants**: e.g. `PROMOTE_TENANTS=tenant-a,tenant-b`
-- **All tenants**: `PROMOTE_TENANTS=all` (pipeline reads tenant registry and promotes to all enabled silo tenants)
+- **Single tenant**: e.g. pipeline variable `PROMOTE_TENANTS=abc`
+- **Multiple tenants**: e.g. `PROMOTE_TENANTS=abc,xyz`
+- **All tenants**: `PROMOTE_TENANTS=all` (pipeline reads `config/tenant-registry.yaml` and promotes to all enabled silo tenants, e.g. abc, xyz)
 - **None**: Do not run promote; validation only
 
-Implementation: Use Bitbucket pipeline variables (or manual step input) to set `PROMOTE_TENANTS`. Pipeline parses this and, for each target tenant, assumes role in that tenant’s account and runs the same deploy steps (CloudFormation + app + Flyway) for that tenant.
+Implementation: Use Bitbucket pipeline variables (or manual step input) to set `PROMOTE_TENANTS`. Pipeline parses this and, for each target tenant (e.g. abc, xyz), assumes role in that tenant’s account and runs the same deploy steps (CloudFormation + app + Flyway) for that tenant. Tenant list comes from `config/tenant-registry.yaml`.
 
 ### 2.4 Example Pipeline Skeleton
 
@@ -119,7 +119,7 @@ pipelines:
       - step: *promote
 ```
 
-- `deploy-tenant.sh` and `promote-tenants.sh` use AWS CLI and CloudFormation; they read tenant config from the tenant registry (e.g. cloned from config repo or from pipeline variables).
+- `deploy-tenant.sh` and `promote-tenants.sh` use AWS CLI and CloudFormation; they read tenant config from `config/tenant-registry.yaml` (in repo or from pipeline variables).
 - **Jira integration**: Use Jira REST API or Bitbucket-Jira integration in script steps: update issue status/link build on success or failure (see section 4).
 
 ## 3. Validation and Approval (ST-160)

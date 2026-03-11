@@ -26,8 +26,8 @@ Short operational procedures for the multi-tenant deployment framework. Assumes 
 1. Open the pipeline run that deployed to base (on `main`).
 2. Run the **manual “Approval for promotion”** step if required.
 3. Run the **“Promote to Tenants”** step. When prompted (or via variables), set:
-   - **Single**: `PROMOTE_TENANTS=tenant-a`
-   - **Multiple**: `PROMOTE_TENANTS=tenant-a,tenant-b`
+   - **Single**: `PROMOTE_TENANTS=abc`
+   - **Multiple**: `PROMOTE_TENANTS=abc,xyz`
    - **All**: `PROMOTE_TENANTS=all`
    - **None**: Do not run the step.
 4. Verify pipeline log for “Promotion” section: list of tenants and success/fail per tenant.
@@ -49,7 +49,7 @@ Short operational procedures for the multi-tenant deployment framework. Assumes 
    - Deploy previous (or specified) app version to that tenant.
    - If DB rollback is required: follow DB runbook (RDS restore from snapshot or Flyway undo).
 4. Verify app and DB for that tenant; check deployment history and logs.
-5. Update Jira if needed (e.g. comment “Rolled back tenant-a to v1.2.3”).
+5. Update Jira if needed (e.g. comment “Rolled back abc to v1.2.3”).
 
 **DB-only rollback**: If only DB migration must be reverted, use RDS point-in-time restore or snapshot restore for that tenant’s DB, then align app version if necessary.
 
@@ -61,7 +61,7 @@ Short operational procedures for the multi-tenant deployment framework. Assumes 
 
 **Steps**:
 1. Create AWS account (via LZA or org process); note account ID.
-2. Add tenant to **tenant registry** (e.g. `tenant-registry.yaml` in config repo): id, name, type=silo, region, aws_account_id, enabled=true.
+2. Add tenant to **tenant registry** (`config/tenant-registry.yaml`): add a new key (e.g. `new-tenant`) with `name`, `region`, and `environments` (e.g. `[prod]`). See existing entries (base, abc, xyz) for the schema.
 3. Commit and merge registry change.
 4. Run infrastructure pipeline (or manual CloudFormation) to deploy stacks for the new tenant (network, security, data, compute) using the new tenant id and account.
 5. Store secrets (DB, app config) in that account’s Secrets Manager (or Parameter Store).

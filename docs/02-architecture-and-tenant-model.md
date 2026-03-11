@@ -41,53 +41,49 @@ Tenant metadata is stored in a **central configuration repository** (Bitbucket),
 ### 2.1 Schema (YAML)
 
 ```yaml
-# tenant-registry.yaml
-version: "1.0"
-updated_at: "2025-03-03"
+# config/tenant-registry.yaml
+# Base has staging + prod; other tenants have prod only.
 
 tenants:
   base:
-    id: base
-    name: Foundation
-    type: base
-    enabled: true
+    name: Base
     region: ap-southeast-1
-    aws_account_id: "111111111111"
-    status: active
-    description: First deployment target; validation environment.
+    environments: [staging, prod]
+    # Future (Landing Zone): account per environment
+    # accounts:
+    #   staging: "111111111111"
+    #   prod: "222222222222"
 
-  tenant-a:
-    id: tenant-a
-    name: Tenant A
-    type: silo
-    enabled: true
+  abc:
+    name: ABC
     region: ap-southeast-1
-    aws_account_id: "222222222222"
-    status: active
-    description: Production tenant A.
+    environments: [prod]
+    # accounts:
+    #   prod: "333333333333"
 
-  tenant-b:
-    id: tenant-b
-    name: Tenant B
-    type: silo
-    enabled: true
-    region: eu-west-1
-    aws_account_id: "333333333333"
-    status: active
+  xyz:
+    name: XYZ
+    region: ap-southeast-1
+    environments: [prod]
+    # accounts:
+    #   prod: "444444444444"
 ```
 
 ### 2.2 Field Definitions
 
-| Field            | Type    | Description                                                                |
-| ---------------- | ------- | -------------------------------------------------------------------------- |
-| `id`             | string  | Unique tenant identifier; used in pipelines and CloudFormation parameters. |
-| `name`           | string  | Human-readable name.                                                       |
-| `type`           | enum    | `base` \| `silo`.                                                          |
-| `enabled`        | boolean | If `false`, tenant is skipped for promotions.                              |
-| `region`         | string  | Primary AWS region for this tenant.                                        |
-| `aws_account_id` | string  | AWS account ID (for multi-account model).                                  |
-| `status`         | string  | e.g. `active`, `maintenance`, `deprecated`.                                |
-| `description`    | string  | Optional notes.                                                            |
+The current registry (`config/tenant-registry.yaml`) uses **name**, **region**, and **environments** per tenant. The tenant key (e.g. `base`, `abc`) is the tenant identifier in pipelines and CloudFormation.
+
+| Field            | Type    | Description                                                                 |
+| ---------------- | ------- | --------------------------------------------------------------------------- |
+| *(key)*          | string  | Tenant identifier (e.g. `base`, `abc`, `xyz`); used in pipelines and params. |
+| `name`           | string  | Human-readable name.                                                        |
+| `region`         | string  | Primary AWS region for this tenant.                                         |
+| `environments`   | array   | Environments for this tenant: `[staging, prod]` (base) or `[prod]` (silo).  |
+| `type`           | enum    | *(Optional)* `base` \| `silo`.                                              |
+| `enabled`        | boolean | *(Optional)* If `false`, tenant is skipped for promotions.                   |
+| `aws_account_id` | string  | *(Optional)* AWS account ID (for multi-account model).                       |
+| `status`         | string  | *(Optional)* e.g. `active`, `maintenance`, `deprecated`.                    |
+| `description`    | string  | *(Optional)* Notes.                                                         |
 
 Optional extensions (for promotion and versioning):
 
@@ -109,14 +105,14 @@ applications:
     name: BazApp
 ```
 
-- Deployment matrix: for each promotion run, pipeline reads `tenant-registry.yaml` and optionally `apps-registry.yaml` to decide target tenants (and which apps to deploy where).
+- Deployment matrix: for each promotion run, pipeline reads `config/tenant-registry.yaml` and optionally `config/apps-registry.yaml` to decide target tenants (and which apps to deploy where).
 
 ## 4. Naming Conventions
 
 ### 4.1 AWS Accounts
 
 - **Base tenant**: `{org}-base-{env}` or `{org}-foundation-{env}` (e.g. `acme-base-prod`).
-- **Silo tenants**: `{org}-tenant-{tenant-id}` (e.g. `acme-tenant-tenant-a`).
+- **Silo tenants**: `{org}-tenant-{tenant-id}` (e.g. `acme-tenant-abc`).
 - **Central log account**: `{org}-log` or `{org}-central-log`.
 
 ### 4.2 CloudFormation Stacks
@@ -139,12 +135,12 @@ applications:
 ### 4.5 Resources Within AWS
 
 - **Resource tags**: Enforce `TenantId`, `AppId`, `Environment`, `ManagedBy=CloudFormation`.
-- **Names**: `{tenant-id}-{app-id}-{resource-type}` e.g. `base-foo-rds`, `tenant-a-baz-s3-bucket`.
+- **Names**: `{tenant-id}-{app-id}-{resource-type}` e.g. `base-foo-rds`, `abc-baz-s3-bucket`.
 
 ## 5. Definition of Done (ST-156)
 
 - [ ] Architecture diagram (above) approved and stored in `./docs`.
 - [ ] Tenant metadata schema (YAML/JSON) defined and version-controlled in Bitbucket.
-- [ ] Tenant configuration registry file created in central config repo.
+- [ ] Tenant configuration registry file created (e.g. `config/tenant-registry.yaml` in this repo).
 - [ ] Naming convention document (this section) approved and linked from master plan.
 - [ ] App-to-tenant mapping documented (applications list and deployment matrix).
