@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Shared stacks: ECR repositories for all apps (foo, baz) via nested stacks. One repo per app, shared by all tenants. Use image tags for environment."
+
+Parameters:
+  StackPrefix:
+    Type: String
+    Default: mt
+    Description: Prefix for stack and resource names
+  TemplatesS3Bucket:
+    Type: String
+    Description: S3 bucket where CloudFormation templates are uploaded
+  TemplatesS3Prefix:
+    Type: String
+    Default: cfn/templates
+    Description: S3 prefix (key prefix) for template files
+
+Resources:
+  FooEcrStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecr.yaml"
+      Parameters:
+        StackPrefix: !Ref StackPrefix
+        AppId: foo
+
+  BazEcrStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecr.yaml"
+      Parameters:
+        StackPrefix: !Ref StackPrefix
+        AppId: baz
+
+Outputs:
+  FooEcrRepoUri:
+    Description: ECR repository URI for foo app (shared by all tenants; use image tags for environment)
+    Value: !GetAtt FooEcrStack.Outputs.EcrRepoUri
+    Export:
+      Name: !Sub "${StackPrefix}-foo-EcrRepoUri"
+
+  BazEcrRepoUri:
+    Description: ECR repository URI for baz app (shared by all tenants; use image tags for environment)
+    Value: !GetAtt BazEcrStack.Outputs.EcrRepoUri
+    Export:
+      Name: !Sub "${StackPrefix}-baz-EcrRepoUri"

@@ -51,7 +51,7 @@ For each tenant (including base), use a small set of stacks:
 | Security | `{prefix}-{tenant-id}-security` | `security.yaml` | IAM roles, security groups, KMS (optional). |
 | Secrets | per app | `secrets.yaml` | Secrets Manager (or Parameter Store) placeholders. |
 | Data (per app) | e.g. RdsFooAppStack | `rds.yaml` | RDS per app. |
-| ECR | per app | `ecr.yaml` | ECR repository per app. |
+| ECR | per app | `ecr.yaml` (module), `shared/main.yaml` (nested root) | One ECR repository per app, shared by all tenants. `ecr.yaml` is the module uploaded to S3; `shared/main.yaml` is a nested root that calls it for all apps. Deploy with **`scripts/deploy-shared.sh`** once per account/region. Use image tags for environment. |
 | ECS cluster | shared per tenant/env | `ecs-cluster.yaml` | ECS cluster. |
 | Compute (per app) | e.g. EcsFooAppStack | `ecs-service.yaml` | ECS Fargate service per app. |
 | ALB | shared per tenant/env | `alb.yaml` | Application Load Balancer. |
@@ -84,10 +84,11 @@ Current layout (root stack per tenant/environment with nested stacks):
 │   ├── security.yaml
 │   ├── secrets.yaml
 │   ├── rds.yaml            # RDS per app
-│   ├── ecr.yaml
 │   ├── ecs-cluster.yaml
 │   ├── ecs-service.yaml    # ECS Fargate service per app
 │   └── alb.yaml
+├── shared/
+│   └── ecr.yaml           # ECR per app; use image tags for environment (standalone stacks)
 ├── tenants/
 │   ├── base/
 │   │   └── staging/        # (or prod)
@@ -99,10 +100,11 @@ Current layout (root stack per tenant/environment with nested stacks):
 │           └── params.json
 ├── scripts/
 │   ├── deploy-stack.sh
-│   ├── deploy-tenant-env.sh
+│   ├── deploy-tenant.sh
 │   ├── deploy-tenants.sh
-│   ├── upload-templates-to-s3.sh
-│   └── get-tenant-region.sh
+│   ├── get-tenant-envs.sh
+│   ├── get-tenant-region.sh
+│   └── upload-templates-to-s3.sh
 └── docs/
     └── (this documentation)
 ```

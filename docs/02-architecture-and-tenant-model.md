@@ -42,31 +42,31 @@ Tenant metadata is stored in a **central configuration repository** (Bitbucket),
 
 ```yaml
 # config/tenant-registry.yaml
-# Base has staging + prod; other tenants have prod only.
+# Base has staging + production; other tenants have production only.
 
 tenants:
   base:
     name: Base
     region: ap-southeast-1
-    environments: [staging, prod]
+    environments: [staging, production]
     # Future (Landing Zone): account per environment
     # accounts:
     #   staging: "111111111111"
-    #   prod: "222222222222"
+    #   production: "222222222222"
 
   abc:
     name: ABC
     region: ap-southeast-1
-    environments: [prod]
+    environments: [production]
     # accounts:
-    #   prod: "333333333333"
+    #   production: "333333333333"
 
   xyz:
     name: XYZ
     region: ap-southeast-1
-    environments: [prod]
+    environments: [production]
     # accounts:
-    #   prod: "444444444444"
+    #   production: "444444444444"
 ```
 
 ### 2.2 Field Definitions
@@ -75,15 +75,10 @@ The current registry (`config/tenant-registry.yaml`) uses **name**, **region**, 
 
 | Field            | Type    | Description                                                                 |
 | ---------------- | ------- | --------------------------------------------------------------------------- |
-| *(key)*          | string  | Tenant identifier (e.g. `base`, `abc`, `xyz`); used in pipelines and params. |
+| *(key)*          | string  | Tenant identifier (e.g. `base`, `abc`, `xyz`)                               |
 | `name`           | string  | Human-readable name.                                                        |
 | `region`         | string  | Primary AWS region for this tenant.                                         |
-| `environments`   | array   | Environments for this tenant: `[staging, prod]` (base) or `[prod]` (silo).  |
-| `type`           | enum    | *(Optional)* `base` \| `silo`.                                              |
-| `enabled`        | boolean | *(Optional)* If `false`, tenant is skipped for promotions.                   |
-| `aws_account_id` | string  | *(Optional)* AWS account ID (for multi-account model).                       |
-| `status`         | string  | *(Optional)* e.g. `active`, `maintenance`, `deprecated`.                    |
-| `description`    | string  | *(Optional)* Notes.                                                         |
+| `environments`   | array   | Environments for this tenant: `[staging, production]`                       |
 
 Optional extensions (for promotion and versioning):
 

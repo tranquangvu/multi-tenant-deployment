@@ -5,11 +5,12 @@
 ## Structure
 
 - **`config/`** — Tenant and app registry (YAML)
-- **`templates/`** — CloudFormation module templates (network, security, secrets, ecr, rds, alb, ecs-cluster, ecs-service). Uploaded to S3 for root stack deployment.
+- **`templates/`** — CloudFormation module templates (network, security, secrets, rds, alb, ecs-cluster, ecs-service). Uploaded to S3 for root stack deployment.
+- **`shared/`** — Shared resources (ECR repository per app). Deploy with **`./scripts/deploy-shared.sh`** once per account/region; tenant stacks import ECR URI via CloudFormation export.
 - **`tenants/[tenant-name]/[staging|production]/`** — Per-tenant, per-environment:
   - **`main.yaml`** — Root stack that registers all modules via **TemplateURL** (S3). Deploys nested stacks for each module.
   - **`params.json`** — Parameters for the root stack (TenantId, Environment, StackPrefix, TemplatesS3Bucket, TemplatesS3Prefix).
-- **`scripts/`** — `upload-templates-to-s3.sh`, `deploy-stack.sh` (use for both module stacks and root main.yaml), `deploy-tenant-env.sh`
+- **`scripts/`** — `deploy-shared.sh` (ECR stacks, run once per account/region), `upload-templates-to-s3.sh`, `deploy-stack.sh`, `deploy-tenant.sh`, `deploy-tenants.sh`
 
 ## Tenant layout
 
@@ -55,14 +56,16 @@ tenants/
 
    **deploy-stack.sh** accepts a template path (e.g. `tenants/base/staging/main.yaml`) or a template filename (e.g. `network.yaml` for `templates/`). It substitutes `\${TEMPLATES_S3_BUCKET}` in params from the environment.
 
-When deploying a **root stack** manually, set the region from the tenant registry so the stack is created in the correct region:
+When deploying a **root stack** manually, set the region from the tenant registry so the stack is created in the correct region, or use `deploy-tenant.sh` which does this for you:
 
 ```bash
 export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
 ./scripts/deploy-stack.sh mt-base-staging tenants/base/staging/main.yaml tenants/base/staging/params.json
+# or:
+./scripts/deploy-tenant.sh base staging
 ```
 
-**deploy-tenant-env.sh** and the Bitbucket pipeline set `AWS_DEFAULT_REGION` from `config/tenant-registry.yaml` automatically for the tenant being deployed.
+**deploy-tenant.sh** and the Bitbucket pipeline set `AWS_DEFAULT_REGION` from `config/tenant-registry.yaml` automatically for the tenant being deployed.
 
 ## Bitbucket pipeline (upload + deploy)
 
@@ -74,17 +77,25 @@ export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
 
 ## Legacy deploy (per-stack, no S3)
 
-To deploy each module stack individually (templates from repo, no S3):
+1. **Deploy shared stacks once** (ECR per app) in the target account/region:
+
+   ```bash
+   export AWS_DEFAULT_REGION=ap-southeast-1   # or your region
+   ./scripts/deploy-shared.sh                 # uses shared/params.json; creates mt-ecr-foo, mt-ecr-baz
+   ```
+
+2. Deploy each tenant/environment (root stack per tenant/env):
 
 ```bash
-./scripts/deploy-tenant-env.sh base staging   # or base prod, abc prod, xyz prod
+./scripts/deploy-tenant.sh base staging   # or base prod, abc prod, xyz prod
 ./scripts/deploy-tenants.sh
 ```
 
-Uses **`deploy-stack.sh`** and expects params in the old shape; for the new layout you use **`deploy-stack.sh`** with the root stack (e.g. `tenants/base/staging/main.yaml`) and S3 instead.
+Under the hood these use **`deploy-stack.sh`** with the root stack (e.g. `tenants/base/staging/main.yaml`) and S3.
 
 ## Stack naming
 
+- **Shared stacks:** `{prefix}-ecr-{app}` (e.g. `mt-ecr-foo`, `mt-ecr-baz`). Created by **`deploy-shared.sh`**.
 - **Root stack:** `{prefix}-{tenant-id}-{staging|prod}` (e.g. `mt-base-staging`, `mt-abc-prod`).
 - **Nested stacks:** Created by the root stack with names assigned by CloudFormation (based on root stack name + logical ID).
 

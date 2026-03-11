@@ -90,28 +90,6 @@ Resources:
         StackPrefix: !Ref StackPrefix
         AppId: baz
 
-  EcrFooAppStack:
-    Type: AWS::CloudFormation::Stack
-    DependsOn: SecurityStack
-    Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecr.yaml"
-      Parameters:
-        TenantId: !Ref TenantId
-        Environment: !Ref Environment
-        StackPrefix: !Ref StackPrefix
-        AppId: foo
-
-  EcrBazAppStack:
-    Type: AWS::CloudFormation::Stack
-    DependsOn: SecurityStack
-    Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecr.yaml"
-      Parameters:
-        TenantId: !Ref TenantId
-        Environment: !Ref Environment
-        StackPrefix: !Ref StackPrefix
-        AppId: baz
-
   EcsClusterStack:
     Type: AWS::CloudFormation::Stack
     DependsOn: SecurityStack
@@ -159,7 +137,6 @@ Resources:
   EcsFooAppStack:
     Type: AWS::CloudFormation::Stack
     DependsOn:
-      - EcrFooAppStack
       - AlbStack
       - EcsClusterStack
       - RdsFooAppStack
@@ -169,7 +146,8 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        EcrRepoUri: !GetAtt EcrFooAppStack.Outputs.EcrRepoUri
+        EcrRepoUri: !ImportValue
+          Fn::Sub: "${StackPrefix}-foo-EcrRepoUri"
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupFooArn
         DesiredCount: !Ref FooAppDesiredCount
         DbEndpoint: !GetAtt RdsFooAppStack.Outputs.DbEndpoint
@@ -181,7 +159,6 @@ Resources:
   EcsBazAppStack:
     Type: AWS::CloudFormation::Stack
     DependsOn:
-      - EcrBazAppStack
       - AlbStack
       - EcsClusterStack
       - RdsBazAppStack
@@ -191,7 +168,8 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        EcrRepoUri: !GetAtt EcrBazAppStack.Outputs.EcrRepoUri
+        EcrRepoUri: !ImportValue
+          Fn::Sub: "${StackPrefix}-baz-EcrRepoUri"
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazArn
         DesiredCount: !Ref BazAppDesiredCount
         DbEndpoint: !GetAtt RdsBazAppStack.Outputs.DbEndpoint

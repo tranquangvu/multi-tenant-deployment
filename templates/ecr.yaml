@@ -1,14 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Module: ECR - Repository per app. One per (TenantId, Environment, AppId)."
+Description: "Module: ECR - One repository per app, shared by all tenants. Use image tags for environment (e.g. staging, prod)."
 
 Parameters:
-  TenantId:
-    Type: String
-    Description: Tenant identifier (base, abc, xyz, ...)
-  Environment:
-    Type: String
-    AllowedValues: [staging, prod]
-    Description: Environment (staging or prod)
   AppId:
     Type: String
     Description: Application ID (foo, baz)
@@ -21,15 +14,11 @@ Resources:
   EcrRepo:
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}"
+      RepositoryName: !Sub "${StackPrefix}-${AppId}"
       LifecyclePolicy:
         LifecyclePolicyText: |
           {"rules":[{"rulePriority":1,"description":"Keep last 5 images","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":5},"action":{"type":"expire"}}]}
       Tags:
-        - Key: TenantId
-          Value: !Ref TenantId
-        - Key: Environment
-          Value: !Ref Environment
         - Key: AppId
           Value: !Ref AppId
         - Key: ManagedBy
@@ -37,7 +26,7 @@ Resources:
 
 Outputs:
   EcrRepoUri:
-    Description: ECR repository URI
-    Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${StackPrefix}-${TenantId}-${Environment}-${AppId}"
+    Description: ECR repository URI (shared by all tenants for this app; use image tags for environment)
+    Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${StackPrefix}-${AppId}"
     Export:
-      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-EcrRepoUri"
+      Name: !Sub "${StackPrefix}-${AppId}-EcrRepoUri"

@@ -1,4 +1,4 @@
-# Tenant registry — base has staging + prod; other tenants have prod only.
+# Tenant registry — base has staging + production; other tenants have production only.
 # Used for documentation today; later for pipelines to resolve target account and role per (tenant, env).
 #
 # When using AWS Landing Zone / multi-account:
@@ -10,25 +10,25 @@ tenants:
   base:
     name: Base
     region: ap-southeast-1
-    environments: [staging, prod]
+    environments: [staging, production]
     # Future (Landing Zone): account per environment
     # accounts:
     #   staging: "111111111111"
-    #   prod: "222222222222"
+    #   production: "222222222222"
     # deployment_role_arn: "arn:aws:iam::${account_id}:role/OrganizationAccountAccessRole"
 
   abc:
     name: ABC
     region: ap-southeast-1
-    environments: [prod]
+    environments: [production]
     # accounts:
-    #   prod: "333333333333"
+    #   production: "333333333333"
     # deployment_role_arn: "arn:aws:iam::${account_id}:role/OrganizationAccountAccessRole"
 
   xyz:
     name: XYZ
     region: ap-southeast-1
-    environments: [prod]
+    environments: [production]
     # accounts:
-    #   prod: "444444444444"
+    #   production: "444444444444"
     # deployment_role_arn: "arn:aws:iam::${account_id}:role/OrganizationAccountAccessRole"
