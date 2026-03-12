@@ -104,7 +104,7 @@ Current layout (root stack per tenant/environment with nested stacks):
 │   ├── deploy-tenants.sh
 │   ├── get-tenant-envs.sh
 │   ├── get-tenant-region.sh
-│   └── upload-templates-to-s3.sh
+│   └── upload-templates.sh
 └── docs/
     └── (this documentation)
 ```

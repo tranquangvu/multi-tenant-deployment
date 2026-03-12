@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Upload CloudFormation templates to S3 for TemplateURL-based root stack deployment.
-# Usage: TEMPLATES_S3_BUCKET=my-bucket [TEMPLATES_S3_PREFIX=cfn/templates] ./upload-templates-to-s3.sh
+# Usage: TEMPLATES_S3_BUCKET=my-bucket [TEMPLATES_S3_PREFIX=cfn/templates] ./upload-templates.sh
 set -euo pipefail
 
 BUCKET="${TEMPLATES_S3_BUCKET:?Missing TEMPLATES_S3_BUCKET}"

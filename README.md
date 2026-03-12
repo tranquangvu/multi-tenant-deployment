@@ -10,7 +10,7 @@
 - **`tenants/[tenant-name]/[staging|production]/`** — Per-tenant, per-environment:
   - **`main.yaml`** — Root stack that registers all modules via **TemplateURL** (S3). Deploys nested stacks for each module.
   - **`params.json`** — Parameters for the root stack (TenantId, Environment, StackPrefix, TemplatesS3Bucket, TemplatesS3Prefix).
-- **`scripts/`** — `deploy-shared.sh` (ECR stacks, run once per account/region), `upload-templates-to-s3.sh`, `deploy-stack.sh`, `deploy-tenant.sh`, `deploy-tenants.sh`
+- **`scripts/`** — `deploy-shared.sh` (ECR stacks, run once per account/region), `upload-templates.sh`, `deploy-stack.sh`, `deploy-tenant.sh`, `deploy-tenants.sh`
 
 ## Tenant layout
 
@@ -41,7 +41,7 @@ tenants/
 
    ```bash
    export TEMPLATES_S3_BUCKET=your-cfn-templates-bucket
-   ./scripts/upload-templates-to-s3.sh
+   ./scripts/upload-templates.sh
    ```
 
 2. **Deploy root stack** (main.yaml) for one (tenant, environment). This creates the main stack and all nested stacks:
@@ -49,9 +49,9 @@ tenants/
    ```bash
    export TEMPLATES_S3_BUCKET=your-cfn-templates-bucket
    ./scripts/deploy-stack.sh mt-base-staging tenants/base/staging/main.yaml tenants/base/staging/params.json
-   ./scripts/deploy-stack.sh mt-base-prod tenants/base/production/main.yaml tenants/base/production/params.json
-   ./scripts/deploy-stack.sh mt-abc-prod tenants/abc/production/main.yaml tenants/abc/production/params.json
-   ./scripts/deploy-stack.sh mt-xyz-prod tenants/xyz/production/main.yaml tenants/xyz/production/params.json
+   ./scripts/deploy-stack.sh mt-base-production tenants/base/production/main.yaml tenants/base/production/params.json
+   ./scripts/deploy-stack.sh mt-abc-production tenants/abc/production/main.yaml tenants/abc/production/params.json
+   ./scripts/deploy-stack.sh mt-xyz-production tenants/xyz/production/main.yaml tenants/xyz/production/params.json
    ```
 
    **deploy-stack.sh** accepts a template path (e.g. `tenants/base/staging/main.yaml`) or a template filename (e.g. `network.yaml` for `templates/`). It substitutes `\${TEMPLATES_S3_BUCKET}` in params from the environment.
@@ -96,7 +96,7 @@ Under the hood these use **`deploy-stack.sh`** with the root stack (e.g. `tenant
 ## Stack naming
 
 - **Shared stacks:** `{prefix}-ecr-{app}` (e.g. `mt-ecr-foo`, `mt-ecr-baz`). Created by **`deploy-shared.sh`**.
-- **Root stack:** `{prefix}-{tenant-id}-{staging|prod}` (e.g. `mt-base-staging`, `mt-abc-prod`).
+- **Root stack:** `{prefix}-{tenant-id}-{staging|prod}` (e.g. `mt-base-staging`, `mt-abc-production`).
 - **Nested stacks:** Created by the root stack with names assigned by CloudFormation (based on root stack name + logical ID).
 
 Prefix default: `mt` (override with `STACK_PREFIX`).

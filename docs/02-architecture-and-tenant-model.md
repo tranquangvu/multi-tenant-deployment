@@ -106,7 +106,7 @@ applications:
 
 ### 4.1 AWS Accounts
 
-- **Base tenant**: `{org}-base-{env}` or `{org}-foundation-{env}` (e.g. `acme-base-prod`).
+- **Base tenant**: `{org}-base-{env}` or `{org}-foundation-{env}` (e.g. `acme-base-production`).
 - **Silo tenants**: `{org}-tenant-{tenant-id}` (e.g. `acme-tenant-abc`).
 - **Central log account**: `{org}-log` or `{org}-central-log`.
 
