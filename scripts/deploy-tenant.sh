@@ -91,7 +91,7 @@ ENV_DIR="staging"
 STACK_ENV_SUFFIX="staging"
 if [[ "$ENV_NAME" == "production" ]]; then
   ENV_DIR="production"
-  STACK_ENV_SUFFIX="prod"
+  STACK_ENV_SUFFIX="production"
 fi
 
 STACK_NAME="${PREFIX}-${TENANT_ID}-${STACK_ENV_SUFFIX}"

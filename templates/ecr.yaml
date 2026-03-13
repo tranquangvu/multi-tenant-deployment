@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Module: ECR - One repository per app, shared by all tenants. Use image tags for environment (e.g. staging, prod)."
+Description: "Module: ECR - One repository per app, shared by all tenants. Use image tags for environment (e.g. staging, production)."
 
 Parameters:
   AppId:

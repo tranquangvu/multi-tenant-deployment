@@ -91,7 +91,7 @@ Current layout (root stack per tenant/environment with nested stacks):
 │   └── ecr.yaml           # ECR per app; use image tags for environment (standalone stacks)
 ├── tenants/
 │   ├── base/
-│   │   └── staging/        # (or prod)
+│   │   └── staging/        # (or production)
 │   │       ├── main.yaml   # root stack; nested stacks reference templates
 │   │       └── params.json
 │   └── <tenant-id>/

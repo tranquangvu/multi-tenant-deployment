@@ -1,6 +1,6 @@
 # Bitbucket Pipelines — Infrastructure repo (multi-tenant CloudFormation)
 # 1) Upload templates to S3  2) Deploy root stack (main.yaml) per tenant/env.
-# Base has staging + prod; other tenants (abc, xyz) have production only.
+# Base has staging + production; other tenants (abc, xyz) have production only.
 # OIDC: set AWS_ROLE_ARN in each deployment environment (and repo var for upload-templates).
 # Repo variables: TEMPLATES_S3_BUCKET, AWS_ROLE_ARN (for upload-templates).
 
@@ -75,8 +75,8 @@ pipelines:
             - ./scripts/deploy-shared.sh
             - |
               ENV_NAME="$DEPLOY_ENVIRONMENT"
-              [[ "$ENV_NAME" == "prod" ]] && ENV_NAME="production"
-              CFN_ENV="staging"; [[ "$ENV_NAME" == "production" ]] && CFN_ENV="prod"
+              [[ "$ENV_NAME" == "production" ]] && ENV_NAME="production"
+              CFN_ENV="staging"; [[ "$ENV_NAME" == "production" ]] && CFN_ENV="production"
               ./scripts/deploy-stack.sh "mt-${DEPLOY_TENANT_ID}-${CFN_ENV}" "tenants/${DEPLOY_TENANT_ID}/${ENV_NAME}/main.yaml" "tenants/${DEPLOY_TENANT_ID}/${ENV_NAME}/params.json"
 
     # Promote to multiple tenants (production only for abc/xyz)
