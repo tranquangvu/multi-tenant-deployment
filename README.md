@@ -54,7 +54,7 @@ tenants/
    ./scripts/deploy-stack.sh mt-xyz-production tenants/xyz/production/main.yaml tenants/xyz/production/params.json
    ```
 
-   **deploy-stack.sh** accepts a template path (e.g. `tenants/base/staging/main.yaml`) or a template filename (e.g. `network.yaml` for `templates/`). It substitutes `\${TEMPLATES_S3_BUCKET}` in params from the environment.
+   **deploy-stack.sh** accepts a template path (e.g. `tenants/base/staging/main.yaml`) or a template filename (e.g. `network.yaml` for `templates/`). Params use `\${TEMPLATES_S3_BUCKET:-go-ascendasia}` and `\${TEMPLATES_S3_PREFIX:-cfn/templates}`; **deploy-stack.sh** resolves them like bash.
 
 When deploying a **root stack** manually, set the region from the tenant registry so the stack is created in the correct region, or use `deploy-tenant.sh` which does this for you:
 

@@ -2,8 +2,8 @@
   { "ParameterKey": "TenantId", "ParameterValue": "base" },
   { "ParameterKey": "Environment", "ParameterValue": "staging" },
   { "ParameterKey": "StackPrefix", "ParameterValue": "mt" },
-  { "ParameterKey": "TemplatesS3Bucket", "ParameterValue": "${TEMPLATES_S3_BUCKET}" },
-  { "ParameterKey": "TemplatesS3Prefix", "ParameterValue": "cfn/templates" },
+  { "ParameterKey": "TemplatesS3Bucket", "ParameterValue": "${TEMPLATES_S3_BUCKET:-go-ascendasia}" },
+  { "ParameterKey": "TemplatesS3Prefix", "ParameterValue": "${TEMPLATES_S3_PREFIX:-cfn/templates}" },
   { "ParameterKey": "FooAppDesiredCount", "ParameterValue": "0" },
   { "ParameterKey": "BazAppDesiredCount", "ParameterValue": "0" }
 ]

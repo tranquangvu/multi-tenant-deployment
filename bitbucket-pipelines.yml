@@ -9,13 +9,13 @@ image: amazon/aws-cli:latest
 definitions:
   steps:
     - step: &upload-templates
-        name: Upload templates to S3
+        name: Upload Templates To S3
         oidc: true
         script:
           - chmod +x ./scripts/*.sh
           - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
           - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
-          - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET}"
+          - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET:-go-ascendasia}"
           - export TEMPLATES_S3_PREFIX="${TEMPLATES_S3_PREFIX:-cfn/templates}"
           - ./scripts/upload-templates.sh
 
@@ -26,7 +26,7 @@ definitions:
           - chmod +x ./scripts/*.sh
           - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
           - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
-          - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET}"
+          - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET:-go-ascendasia}"
           - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
           - export AWS_REGION="$AWS_DEFAULT_REGION"
           - ./scripts/deploy-shared.sh
@@ -40,7 +40,7 @@ definitions:
           - chmod +x ./scripts/*.sh
           - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
           - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
-          - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET}"
+          - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET:-go-ascendasia}"
           - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
           - export AWS_REGION="$AWS_DEFAULT_REGION"
           - ./scripts/deploy-shared.sh
@@ -69,7 +69,7 @@ pipelines:
             - chmod +x ./scripts/*.sh
             - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
             - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
-            - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET}"
+            - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET:-go-ascendasia}"
             - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh $DEPLOY_TENANT_ID)"
             - export AWS_REGION="$AWS_DEFAULT_REGION"
             - ./scripts/deploy-shared.sh
@@ -93,7 +93,7 @@ pipelines:
             - chmod +x ./scripts/*.sh
             - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
             - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
-            - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET}"
+            - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET:-go-ascendasia}"
             - |
               if [[ -z "$PROMOTE_TENANTS" ]]; then
                 echo "Set PROMOTE_TENANTS (e.g. abc,xyz or 'all')"
