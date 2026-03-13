@@ -10,6 +10,7 @@ definitions:
   steps:
     - step: &upload-templates
         name: Upload templates to S3
+        deployment: Production
         oidc: true
         script:
           - chmod +x ./scripts/*.sh
