@@ -10,7 +10,6 @@ definitions:
   steps:
     - step: &upload-templates
         name: Upload templates to S3
-        deployment: Production
         oidc: true
         script:
           - chmod +x ./scripts/*.sh
@@ -22,7 +21,6 @@ definitions:
 
     - step: &deploy-base-staging
         name: Deploy Base Staging (root stack)
-        deployment: Production
         oidc: true
         script:
           - chmod +x ./scripts/*.sh
@@ -36,7 +34,6 @@ definitions:
 
     - step: &deploy-base-production
         name: Deploy Base Production (root stack)
-        deployment: Production
         trigger: manual
         oidc: true
         script:
