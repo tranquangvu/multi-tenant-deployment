@@ -5,7 +5,7 @@ This document is the master plan for designing and implementing the complete inf
 ## 1. Scope Summary
 
 - **Base tenant**: First deployment target for all code and infrastructure changes; validation environment.
-- **Applications**: Each in silo mode per tenant (isolated DB, config, secrets). Current implementation: 2 apps (foo, baz); design supports more (see `config/apps-registry.yaml`).
+- **Applications**: Each in silo mode per tenant (isolated DB, config, secrets). Current implementation: 2 apps (foo, baz); design supports more (see `config/app-registry.yaml`).
 - **Flow**: Deploy to base → validate → selectively promote to one, many, or all tenants.
 - **Tools**: Bitbucket (VCS + pipelines), Jira (traceability), Flyway (DB migrations), AWS (Landing Zone / multi-account), CloudFormation (IaC).
 

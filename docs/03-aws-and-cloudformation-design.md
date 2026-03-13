@@ -13,7 +13,7 @@ This document describes the AWS account strategy, alignment with AWS Landing Zon
 | Account purpose | Naming example | Usage |
 |-----------------|----------------|--------|
 | Base (foundation) | `{org}-base` | First deployment, validation, smoke tests. |
-| Silo tenant (e.g. abc) | `{org}-tenant-{tenant-id}` (e.g. `{org}-tenant-abc`) | Isolated env for that tenant (all apps per `config/apps-registry.yaml`). |
+| Silo tenant (e.g. abc) | `{org}-tenant-{tenant-id}` (e.g. `{org}-tenant-abc`) | Isolated env for that tenant (all apps per `config/app-registry.yaml`). |
 | Silo tenant B … N | `{org}-tenant-{id}` | Same for other tenants. |
 | Central log | `{org}-log` | Log aggregation from all tenant accounts. |
 
@@ -78,7 +78,7 @@ Current layout (root stack per tenant/environment with nested stacks):
 ```
 ├── config/
 │   ├── tenant-registry.yaml   # config/tenant-registry.yaml in this repo
-│   └── apps-registry.yaml
+│   └── app-registry.yaml
 ├── templates/
 │   ├── network.yaml
 │   ├── security.yaml

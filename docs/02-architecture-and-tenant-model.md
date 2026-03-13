@@ -87,12 +87,12 @@ Optional extensions (for promotion and versioning):
 
 ## 3. App-to-Tenant Mapping
 
-- Each application has one environment per tenant. The current implementation uses **2 applications** (foo, baz), defined in `config/apps-registry.yaml`; the design supports adding more.
+- Each application has one environment per tenant. The current implementation uses **2 applications** (foo, baz), defined in `config/app-registry.yaml`; the design supports adding more.
 - Mapping is implicit: **App × Tenant** = one environment (one DB, one config, one set of secrets).
 - Document the list of application IDs in the same config repo, e.g.:
 
 ```yaml
-# config/apps-registry.yaml
+# config/app-registry.yaml
 applications:
   - id: foo
     name: FooApp
@@ -100,7 +100,7 @@ applications:
     name: BazApp
 ```
 
-- Deployment matrix: for each promotion run, pipeline reads `config/tenant-registry.yaml` and optionally `config/apps-registry.yaml` to decide target tenants (and which apps to deploy where).
+- Deployment matrix: for each promotion run, pipeline reads `config/tenant-registry.yaml` and optionally `config/app-registry.yaml` to decide target tenants (and which apps to deploy where).
 
 ## 4. Naming Conventions
 

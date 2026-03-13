@@ -68,5 +68,5 @@ This document describes **centralized logging**, **monitoring**, and **alerting*
 - [ ] Logs from all tenant environments (including base) visible in central dashboard or queryable in central account.
 - [ ] Deployment logs and deployment status visible in central dashboard.
 - [ ] Alerts triggered on failed deployments or validation errors.
-- [ ] Monitoring verified for all applications (per-tenant or aggregate as designed; see `config/apps-registry.yaml` for current app list).
+- [ ] Monitoring verified for all applications (per-tenant or aggregate as designed; see `config/app-registry.yaml` for current app list).
 - [ ] Audit trails for deployments and configuration changes in place and documented.
