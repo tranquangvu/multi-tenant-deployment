@@ -28,5 +28,3 @@ Outputs:
   EcrRepoUri:
     Description: ECR repository URI (shared by all tenants for this app; use image tags for environment)
     Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${StackPrefix}-${AppId}"
-    Export:
-      Name: !Sub "${StackPrefix}-${AppId}-EcrRepoUri"
