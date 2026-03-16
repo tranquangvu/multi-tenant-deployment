@@ -1,37 +1,51 @@
 # AWS and CloudFormation Design
 
-This document describes the AWS account strategy, alignment with AWS Landing Zone (LZA), and the CloudFormation (IaC) design for the multi-tenant system.
+This document describes the AWS account strategy, alignment with **AWS Landing Zone (LZA) with multiple accounts**, and the CloudFormation (IaC) design for the multi-tenant system.
 
 ## 1. AWS Account Strategy
 
-### 1.1 Option A: Multi-Account (Recommended for LZA)
+### 1.1 Landing Zone with Multiple Accounts (Recommended)
 
-- **One AWS account per tenant** (base + each silo tenant).
-- **Separate central account** for logging (and optionally security, shared services).
-- Aligns with AWS Landing Zone Accelerator (LZA) and best practices for isolation and governance.
+The design **supports and recommends** an **AWS Landing Zone (LZA)** where:
+
+- **One AWS account per tenant** (base + each silo tenant); optionally one account per base environment (staging vs production).
+- **One central account** for logging (and optionally security, shared services).
+- All accounts live under the same **AWS Organization**; governance, SCPs, and identity (e.g. IAM Identity Center) are applied centrally.
+
+```
+     ┌─────────────────────────────────────────────────────────────────┐
+     │                  AWS Organization / Landing Zone                 │
+     ├─────────────┬─────────────┬─────────────┬─────────────┬──────────┤
+     │ Base        │ Tenant A    │ Tenant B    │ Tenant …N   │ Central  │
+     │ Account     │ Account     │ Account     │ Account     │ Log      │
+     │ (foundation)│ (silo)      │ (silo)      │ (silo)      │ Account  │
+     └─────────────┴─────────────┴─────────────┴─────────────┴──────────┘
+```
 
 | Account purpose | Naming example | Usage |
 |-----------------|----------------|--------|
-| Base (foundation) | `{org}-base` | First deployment, validation, smoke tests. |
+| Base (foundation) | `{org}-base` or `{org}-base-{env}` | First deployment, validation, smoke tests. |
 | Silo tenant (e.g. abc) | `{org}-tenant-{tenant-id}` (e.g. `{org}-tenant-abc`) | Isolated env for that tenant (all apps per `config/app-registry.yaml`). |
 | Silo tenant B … N | `{org}-tenant-{id}` | Same for other tenants. |
-| Central log | `{org}-log` | Log aggregation from all tenant accounts. |
+| Central log | `{org}-log` | Log aggregation from all tenant and base accounts. |
+
+The **tenant registry** (`config/tenant-registry.yaml`) holds the mapping of tenant + environment → AWS account ID; the pipeline assumes a role in each target account to deploy. See [02-architecture-and-tenant-model.md](02-architecture-and-tenant-model.md) for the architecture diagram and schema.
 
 ### 1.2 Option B: Single Account, Multiple VPCs/Environments
 
 - One AWS account; each tenant is a separate VPC (or separate namespace/stacks).
-- Simpler to start; less isolation. Use if multi-account is not yet in place.
+- Simpler to start; less isolation. Use if a multi-account landing zone is not yet in place.
 - CloudFormation stacks still use `TenantId` parameter for separation.
 
-Recommendation: Prefer **Option A** for production and compliance; use **Option B** only for PoC or constrained environments.
+Recommendation: Prefer **Option A (Landing Zone with multiple accounts)** for production and compliance; use **Option B** only for PoC or constrained environments.
 
 ## 2. AWS Landing Zone (LZA) Alignment
 
-- Use **AWS Landing Zone Accelerator (LZA)** or existing Landing Zone for:
-  - **Account vending**: New tenant = new account via LZA.
+- Use **AWS Landing Zone Accelerator (LZA)** or an existing **Landing Zone with multiple accounts** for:
+  - **Account vending**: New tenant = new account via LZA; base can have one account or one per environment.
   - **Governance**: SCPs, guardrails, centralized identity (e.g. IAM Identity Center).
-  - **Centralized logging**: All accounts send logs to the central log account (e.g. CloudWatch Logs, or S3 → OpenSearch).
-- Ensure base and tenant accounts are part of the same LZA organization; log account receives cross-account log streams.
+  - **Centralized logging**: All workload accounts (base + tenants) send logs to the central log account (e.g. CloudWatch Logs cross-account subscription, or S3 → OpenSearch).
+- Ensure base and all tenant accounts are part of the same LZA organization; the central log account receives cross-account log streams from every workload account.
 
 ## 3. CloudFormation Stack Design
 
@@ -133,12 +147,3 @@ Ensure base tenant stacks provision at least:
 - **Option 1**: OIDC federation (Bitbucket Pipelines OIDC → AWS IAM role). No long-lived keys.
 - **Option 2**: IAM user with access keys stored in Bitbucket repository variables (less secure).
 - For each tenant account (and base): one role that the pipeline can assume (e.g. `BitbucketPipelineRole`) with permissions to create/update CloudFormation stacks, read parameters, and write to S3 (if using S3 for templates). Restrict by `TenantId` in resource tags or condition keys where possible.
-
-## 7. Definition of Done (Infrastructure)
-
-- [ ] Account strategy (multi-account vs single-account) decided and documented.
-- [ ] CloudFormation templates for base tenant implemented and deployable.
-- [ ] Templates parameterized by `TenantId` (and app where needed).
-- [ ] Parameter files or pipeline logic to supply tenant-specific values from tenant registry.
-- [ ] Central log account design and cross-account log shipping approach documented.
-- [ ] Pipeline IAM roles and permissions documented (and implemented in Bitbucket + AWS).

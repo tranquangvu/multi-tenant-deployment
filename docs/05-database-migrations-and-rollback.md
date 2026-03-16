@@ -1,8 +1,8 @@
-# Database Migrations and Rollback (ST-158, ST-161)
+# Database Migrations and Rollback
 
-This document covers **Flyway** for database migrations (ST-158) and **per-tenant rollback** strategy (ST-161).
+This document covers **Flyway** for database migrations and **per-tenant rollback** strategy.
 
-## 1. Flyway Integration (ST-158)
+## 1. Flyway Integration
 
 ### 1.1 Approach
 
@@ -35,7 +35,7 @@ This document covers **Flyway** for database migrations (ST-158) and **per-tenan
 - **Base tenant**: After CloudFormation and app deploy, run Flyway against base DB (in same stage or right after “Deploy to Base”).
 - **Promotion**: For each promoted tenant, after deploying app to that tenant, run Flyway against that tenant’s DB. Order: infra → app → Flyway (or Flyway before app restart, depending on compatibility).
 
-### 1.5 Acceptance Criteria (ST-158)
+### 1.5 Acceptance Criteria
 
 - [ ] Flyway migration scripts stored in repo.
 - [ ] Successful DB migration to base tenant in pipeline.
@@ -43,7 +43,7 @@ This document covers **Flyway** for database migrations (ST-158) and **per-tenan
 - [ ] Migration process repeatable across tenants (same scripts, different URL/creds).
 - [ ] Rollback strategy documented (below).
 
-## 2. Rollback Strategy (ST-161)
+## 2. Rollback Strategy
 
 ### 2.1 Application Rollback (Per Tenant)
 
@@ -73,7 +73,7 @@ This document covers **Flyway** for database migrations (ST-158) and **per-tenan
   4. Logs rollback in deployment history and updates Jira if desired.
 - **Pipeline**: Optional dedicated “Rollback” pipeline or manual step that calls these scripts with tenant and version inputs.
 
-### 2.4 Acceptance Criteria (ST-161)
+### 2.4 Acceptance Criteria
 
 - [ ] Rollback can be executed per tenant.
 - [ ] Pipeline (or script) logs reflect rollback actions.

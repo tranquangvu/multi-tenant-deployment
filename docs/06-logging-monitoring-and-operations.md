@@ -1,6 +1,6 @@
-# Logging, Monitoring, and Operations (ST-162)
+# Logging, Monitoring, and Operations
 
-This document describes **centralized logging**, **monitoring**, and **alerting** across all tenant environments, with a central log account aligned to AWS Landing Zone (LZA) best practices. It satisfies **ST-162**.
+This document describes **centralized logging**, **monitoring**, and **alerting** across all tenant environments, with a central log account aligned to AWS Landing Zone (LZA) best practices.
 
 ## 1. Centralized Logging (LZA-Style)
 
@@ -42,13 +42,13 @@ This document describes **centralized logging**, **monitoring**, and **alerting*
 - **Per-tenant dashboard**: Key metrics and recent deployments for one tenant (e.g. CloudWatch dashboard or Grafana).
 - **Central dashboard**: All tenants: deployment status, validation status, and alerts. Use CloudWatch dashboards or Grafana with data from central account.
 
-### 2.3 Alerts (ST-162)
+### 2.3 Alerts
 
 - **Failed deployment**: Pipeline fails on base or on a tenant → trigger alert (SNS → email/Slack/PagerDuty).
 - **Validation errors**: Smoke test or health check failure → alert before promotion (and block promotion).
 - **Application errors**: Per-tenant alarms (e.g. 5xx rate, latency p99) in CloudWatch; notify on-call.
 
-## 3. Audit Trails (ST-67)
+## 3. Audit Trails
 
 - **Deployments**: Every deploy and promotion logged with timestamp, tenant(s), version, and operator (or pipeline ID). Stored in deployment history (S3/DynamoDB) and/or central logs.
 - **Configuration changes**: Tenant registry and parameter changes in Bitbucket (git history). Optionally mirror “who changed what” into central log or SIEM.
@@ -61,12 +61,3 @@ This document describes **centralized logging**, **monitoring**, and **alerting*
 - **Rollback a tenant**: Run rollback script with tenant ID (and optional version); verify app and DB state; update Jira and deployment log.
 - **Investigate failed deployment**: Check pipeline logs, central dashboard, and tenant-specific CloudWatch/OpenSearch logs.
 - **Add a new tenant**: Add tenant to tenant registry; create AWS account (LZA); run CloudFormation for new tenant; add to promotion list when ready.
-
-## 5. Definition of Done (ST-162)
-
-- [ ] Centralized log aggregation account configured (CloudWatch and/or OpenSearch).
-- [ ] Logs from all tenant environments (including base) visible in central dashboard or queryable in central account.
-- [ ] Deployment logs and deployment status visible in central dashboard.
-- [ ] Alerts triggered on failed deployments or validation errors.
-- [ ] Monitoring verified for all applications (per-tenant or aggregate as designed; see `config/app-registry.yaml` for current app list).
-- [ ] Audit trails for deployments and configuration changes in place and documented.

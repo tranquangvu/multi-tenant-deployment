@@ -1,70 +1,71 @@
 # Multi-Tenant Infrastructure — Master Plan
 
-This document is the master plan for designing and implementing the complete infrastructure for the multi-tenant system as specified in **ST-67** and its subtasks. It uses **AWS**, **Bitbucket Pipelines**, and **AWS CloudFormation** for IaC.
+This document is the master plan for designing and implementing the complete infrastructure for the multi-tenant system. It uses **AWS**, **Bitbucket Pipelines**, and **AWS CloudFormation** for IaC.
 
 ## 1. Scope Summary
 
-- **Base tenant**: First deployment target for all code and infrastructure changes; validation environment.
+- **Landing zone**: Design supports an **AWS Landing Zone (LZA) with multiple accounts** — one account per tenant (base + silo tenants) plus a central log account; pipeline assumes roles per account to deploy.
+- **Base tenant**: First deployment target for all code and infrastructure changes; validation environment (in its own account(s)).
 - **Applications**: Each in silo mode per tenant (isolated DB, config, secrets). Current implementation: 2 apps (foo, baz); design supports more (see `config/app-registry.yaml`).
 - **Flow**: Deploy to base → validate → selectively promote to one, many, or all tenants.
-- **Tools**: Bitbucket (VCS + pipelines), Jira (traceability), Flyway (DB migrations), AWS (Landing Zone / multi-account), CloudFormation (IaC).
+- **Tools**: Bitbucket (VCS + pipelines), Jira (traceability), Flyway (DB migrations), AWS (Landing Zone with multiple accounts), CloudFormation (IaC).
 
 ## 2. Traceability to Requirements
 
-| Requirement | Focus | Doc Reference |
-|-------------|--------|----------------|
-| **ST-67** | Multi-tenant deployment framework, base tenant, promotion, rollback, observability | All docs |
-| **ST-156** | Tenant model, environment structure, metadata schema, naming | [02-architecture-and-tenant-model.md](02-architecture-and-tenant-model.md) |
-| **ST-157** | CI/CD pipeline for base tenant, Bitbucket, Jira | [04-bitbucket-pipelines-and-cicd.md](04-bitbucket-pipelines-and-cicd.md) |
-| **ST-158** | Flyway DB migrations, base-first then tenants | [05-database-migrations-and-rollback.md](05-database-migrations-and-rollback.md) |
-| **ST-159** | Selective tenant promotion (single / set / all / none), audit | [04-bitbucket-pipelines-and-cicd.md](04-bitbucket-pipelines-and-cicd.md) |
-| **ST-160** | Validation, approval workflow, smoke tests, health checks | [04-bitbucket-pipelines-and-cicd.md](04-bitbucket-pipelines-and-cicd.md) |
-| **ST-161** | Rollback per tenant (app + DB) | [05-database-migrations-and-rollback.md](05-database-migrations-and-rollback.md) |
-| **ST-162** | Centralized logging and monitoring | [06-logging-monitoring-and-operations.md](06-logging-monitoring-and-operations.md) |
+| Focus | Doc Reference |
+|-------|----------------|
+| Multi-tenant deployment framework, base tenant, promotion, rollback, observability | All docs |
+| Tenant model, environment structure, metadata schema, naming | [02-architecture-and-tenant-model.md](02-architecture-and-tenant-model.md) |
+| CI/CD pipeline for base tenant, Bitbucket, Jira | [04-bitbucket-pipelines-and-cicd.md](04-bitbucket-pipelines-and-cicd.md) |
+| Flyway DB migrations, base-first then tenants | [05-database-migrations-and-rollback.md](05-database-migrations-and-rollback.md) |
+| Selective tenant promotion (single / set / all / none), audit | [04-bitbucket-pipelines-and-cicd.md](04-bitbucket-pipelines-and-cicd.md) |
+| Validation, approval workflow, smoke tests, health checks | [04-bitbucket-pipelines-and-cicd.md](04-bitbucket-pipelines-and-cicd.md) |
+| Rollback per tenant (app + DB) | [05-database-migrations-and-rollback.md](05-database-migrations-and-rollback.md) |
+| Centralized logging and monitoring | [06-logging-monitoring-and-operations.md](06-logging-monitoring-and-operations.md) |
 
 ## 3. High-Level Task Checklist
 
 ### Phase 1: Foundation and tenant model
 
-- [ ] **1.1** Define and approve tenant model (base + N silo tenants) — ST-156
-- [ ] **1.2** Define tenant metadata schema (region, status, version, enablement) and version in Bitbucket — ST-156
-- [ ] **1.3** Define naming conventions for AWS accounts, pipelines, repos, stacks — ST-156
-- [ ] **1.4** Create central tenant configuration registry (e.g. `config/tenant-registry.yaml`) — ST-156
-- [ ] **1.5** Document app-to-tenant mapping and store in repo — ST-156
+- [ ] **1.1** Define and approve tenant model (base + N silo tenants)
+- [ ] **1.2** Define tenant metadata schema (region, status, version, enablement) and version in Bitbucket
+- [ ] **1.3** Define naming conventions for AWS accounts, pipelines, repos, stacks
+- [ ] **1.4** Create central tenant configuration registry (e.g. `config/tenant-registry.yaml`)
+- [ ] **1.5** Document app-to-tenant mapping and store in repo
 
 ### Phase 2: AWS and CloudFormation (IaC)
 
-- [ ] **2.1** Design AWS account strategy (base tenant account, one account per tenant or OU structure) — ST-67
-- [ ] **2.2** Align with AWS Landing Zone / Landing Zone Accelerator (LZA) for governance — ST-67
+- [ ] **2.1** Design AWS account strategy (Landing Zone with multiple accounts: base account(s), one account per tenant, central log)
+- [ ] **2.2** Align with AWS Landing Zone / Landing Zone Accelerator (LZA) for governance and account vending
 - [ ] **2.3** Design CloudFormation stack layout (shared vs per-tenant, nested stacks, parameters)
 - [ ] **2.4** Implement base-tenant infrastructure templates (VPC, compute/ECS/Lambda, RDS, secrets, IAM)
 - [ ] **2.5** Parameterize templates for tenant ID / account so same templates can deploy per tenant
-- [ ] **2.6** Define central log account and cross-account log shipping (per LZA) — ST-162
+- [ ] **2.6** Define central log account and cross-account log shipping (per LZA)
 
 ### Phase 3: Bitbucket Pipelines and CI/CD
 
-- [ ] **3.1** Implement main pipeline: build → deploy to base tenant — ST-157
-- [ ] **3.2** Integrate Jira (build/deploy status, transition on success/failure) — ST-157
-- [ ] **3.3** Add Flyway migration step (base tenant first) to pipeline — ST-158
-- [ ] **3.4** Add validation stage: smoke tests + health checks on base tenant — ST-160
-- [ ] **3.5** Add manual/approval gate before promotion to non-base tenants — ST-160
-- [ ] **3.6** Implement promotion stage with tenant selection (single / set / all / none) — ST-159
-- [ ] **3.7** Log deployment history and target tenant list for each promotion — ST-159
-- [ ] **3.8** Implement rollback pipeline or steps (per-tenant and optionally global) — ST-161
+- [ ] **3.1** Implement main pipeline: build → deploy to base tenant
+- [ ] **3.2** Integrate Jira (build/deploy status, transition on success/failure)
+- [ ] **3.3** Add Flyway migration step (base tenant first) to pipeline
+- [ ] **3.4** Add validation stage: smoke tests + health checks on base tenant
+- [ ] **3.5** Add manual/approval gate before promotion to non-base tenants
+- [ ] **3.6** Implement promotion stage with tenant selection (single / set / all / none)
+- [ ] **3.7** Log deployment history and target tenant list for each promotion
+- [ ] **3.8** Implement rollback pipeline or steps (per-tenant and optionally global)
 
 ### Phase 4: Database and rollback
 
-- [ ] **4.1** Store Flyway migration scripts in repo; configure per-tenant DB connection — ST-158
-- [ ] **4.2** Document and implement rollback strategy (Flyway undo or snapshot restore) — ST-161
-- [ ] **4.3** Version/tag deployments per tenant for rollback — ST-161
+- [ ] **4.1** Store Flyway migration scripts in repo; configure per-tenant DB connection
+- [ ] **4.2** Document and implement rollback strategy (Flyway undo or snapshot restore)
+- [ ] **4.3** Version/tag deployments per tenant for rollback
 
 ### Phase 5: Observability and compliance
 
-- [ ] **5.1** Configure centralized log aggregation (e.g. CloudWatch Logs / OpenSearch in central account) — ST-162
-- [ ] **5.2** Configure cross-account logging from each tenant to central account — ST-162
-- [ ] **5.3** Set up deployment and validation metrics/dashboards per tenant — ST-162
-- [ ] **5.4** Configure alerts for failed deployments and validation errors — ST-162
-- [ ] **5.5** Ensure audit trails for deployments and config changes per tenant — ST-67
+- [ ] **5.1** Configure centralized log aggregation (e.g. CloudWatch Logs / OpenSearch in central account)
+- [ ] **5.2** Configure cross-account logging from each tenant to central account
+- [ ] **5.3** Set up deployment and validation metrics/dashboards per tenant
+- [ ] **5.4** Configure alerts for failed deployments and validation errors
+- [ ] **5.5** Ensure audit trails for deployments and config changes per tenant
 
 ### Phase 6: Documentation and governance
 
