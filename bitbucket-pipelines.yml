@@ -79,6 +79,33 @@ pipelines:
               CFN_ENV="staging"; [[ "$ENV_NAME" == "production" ]] && CFN_ENV="production"
               ./scripts/deploy-stack.sh "mt-${DEPLOY_TENANT_ID}-${CFN_ENV}" "tenants/${DEPLOY_TENANT_ID}/${ENV_NAME}/main.yaml" "tenants/${DEPLOY_TENANT_ID}/${ENV_NAME}/params.json"
 
+    # Update ECS task definition with new image tag and deploy (triggered by app repo or run manually).
+    # Variables: IMAGE_TAG (required), TARGET_TENANTS (required), DEPLOY_ENV (required), APP_ID (required).
+    deploy-ecs:
+      - variables:
+          - name: IMAGE_TAG
+            default: ""
+          - name: TARGET_TENANTS
+            default: ""
+          - name: DEPLOY_ENV
+            default: ""
+          - name: APP_ID
+            default: ""
+      - step:
+          name: Update ECS image and deploy
+          oidc: true
+          script:
+            - chmod +x ./scripts/*.sh
+            - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
+            - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
+            - |
+              [[ -n "${IMAGE_TAG:-}" ]] || { echo "IMAGE_TAG is required"; exit 1; }
+              [[ -n "${TARGET_TENANTS:-}" ]] || { echo "TARGET_TENANTS is required"; exit 1; }
+              [[ -n "${DEPLOY_ENV:-}" ]] || { echo "DEPLOY_ENV is required"; exit 1; }
+              [[ -n "${APP_ID:-}" ]] || { echo "APP_ID is required"; exit 1; }
+              export IMAGE_TAG TARGET_TENANTS DEPLOY_ENV APP_ID
+              ./scripts/deploy-ecs-image.sh
+
     # Promote to multiple tenants (production only for abc/xyz)
     # Set AWS_ROLE_ARN (e.g. a role that can assume per-tenant roles, or one role per tenant via deployment).
     promote-tenants:
