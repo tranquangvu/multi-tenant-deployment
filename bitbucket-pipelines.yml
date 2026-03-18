@@ -20,7 +20,7 @@ definitions:
           - ./scripts/upload-templates.sh
 
     - step: &deploy-base-staging
-        name: Deploy Base Staging (root stack)
+        name: Deploy Base Staging
         oidc: true
         script:
           - chmod +x ./scripts/*.sh
@@ -32,26 +32,27 @@ definitions:
           - ./scripts/deploy-shared.sh
           - ./scripts/deploy-stack.sh mt-base-staging tenants/base/staging/main.yaml tenants/base/staging/params.json
 
-    - step: &deploy-base-production
-        name: Deploy Base Production (root stack)
-        trigger: manual
+    - step: &validate-base-staging
+        name: Validate Base Staging succeeded
         oidc: true
         script:
           - chmod +x ./scripts/*.sh
           - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
           - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
-          - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET:-go-ascendasia}"
           - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
           - export AWS_REGION="$AWS_DEFAULT_REGION"
-          - ./scripts/deploy-shared.sh
-          - ./scripts/deploy-stack.sh mt-base-production tenants/base/production/main.yaml tenants/base/production/params.json
+          - ./scripts/validate-stack-success.sh mt-base-staging
 
 pipelines:
   branches:
     main:
       - step: *upload-templates
       - step: *deploy-base-staging
-      # - step: *deploy-base-production
+      - step:
+        name: Approve Production Deployment
+        trigger: manual
+        script:
+          - echo "Approved, continue to production"
 
   custom:
     # Deploy root stack for one (tenant, environment). Base: staging or production; others: production only.
@@ -81,7 +82,7 @@ pipelines:
 
     # Update ECS task definition with new image tag and deploy (triggered by app repo or run manually).
     # Variables: IMAGE_TAG (required), TARGET_TENANTS (required), DEPLOY_ENV (required), APP_ID (required).
-    deploy-ecs:
+    deploy-ecs-svc:
       - variables:
           - name: IMAGE_TAG
             default: ""
@@ -104,16 +105,16 @@ pipelines:
               [[ -n "${DEPLOY_ENV:-}" ]] || { echo "DEPLOY_ENV is required"; exit 1; }
               [[ -n "${APP_ID:-}" ]] || { echo "APP_ID is required"; exit 1; }
               export IMAGE_TAG TARGET_TENANTS DEPLOY_ENV APP_ID
-              ./scripts/deploy-ecs-image.sh
+              ./scripts/deploy-ecs-svc.sh.sh
 
     # Promote to multiple tenants (production only for abc/xyz)
     # Set AWS_ROLE_ARN (e.g. a role that can assume per-tenant roles, or one role per tenant via deployment).
-    promote-tenants:
+    deploy-tenants-production:
       - variables:
-          - name: PROMOTE_TENANTS
+          - name: TARGET_TENANTS
             default: ""
       - step:
-          name: Upload templates then promote to tenants
+          name: Deploy Production for $TARGET_TENANTS
           trigger: manual
           oidc: true
           script:
@@ -122,12 +123,12 @@ pipelines:
             - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
             - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET:-go-ascendasia}"
             - |
-              if [[ -z "$PROMOTE_TENANTS" ]]; then
-                echo "Set PROMOTE_TENANTS (e.g. abc,xyz or 'all')"
+              if [[ -z "$TARGET_TENANTS" ]]; then
+                echo "Set TARGET_TENANTS (e.g. abc,xyz or 'all')"
                 exit 1
               fi
-              [[ "$PROMOTE_TENANTS" == "all" ]] && PROMOTE_TENANTS="abc,xyz"
-              IFS=',' read -ra TARR <<< "$PROMOTE_TENANTS"
+              [[ "$TARGET_TENANTS" == "all" ]] && TARGET_TENANTS="abc,xyz"
+              IFS=',' read -ra TARR <<< "$TARGET_TENANTS"
               for t in "${TARR[@]}"; do
                 echo "Deploying $t production..."
                 export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh "$t")"

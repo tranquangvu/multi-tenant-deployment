@@ -17,7 +17,6 @@
   - `upload-templates.sh` — Upload `templates/*.yaml` to S3.
   - `deploy-stack.sh` — Deploy a single CloudFormation stack (used by other scripts).
   - `deploy-tenant.sh` — Deploy root stack for one tenant (and optional environment); sets region from registry.
-  - `deploy-tenants.sh` — Deploy root stacks for multiple tenants (all or explicit list).
   - `get-tenant-envs.sh` — List environments for a tenant from registry.
   - `get-tenant-region.sh` — Output region for a tenant from registry.
 - **`docs/`** — Design and runbooks (see [docs/README.md](docs/README.md)).
@@ -62,7 +61,6 @@ multi-tenant-deployment/
     ├── upload-templates.sh
     ├── deploy-stack.sh
     ├── deploy-tenant.sh
-    ├── deploy-tenants.sh
     ├── get-tenant-envs.sh
     └── get-tenant-region.sh
 ```
@@ -96,9 +94,6 @@ All root stacks (shared and per-tenant) pull module templates from S3. Upload te
    ./scripts/deploy-tenant.sh xyz production
    # Or all envs for a tenant:
    ./scripts/deploy-tenant.sh base
-   # Or all tenants (all their envs):
-   ./scripts/deploy-tenants.sh
-   ./scripts/deploy-tenants.sh base abc
    ```
 
    **Option B — Manual stack name and paths:** set region first, then:

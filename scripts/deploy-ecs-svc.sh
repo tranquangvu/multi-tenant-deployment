@@ -3,8 +3,8 @@
 # Run from multi-tenant-deployment repo (e.g. from Bitbucket pipeline or after trigger from app repo).
 #
 # Usage:
-#   DEPLOY_ENV=staging TARGET_TENANTS=base IMAGE_TAG=sha-abc1234 APP_ID=baz ./scripts/deploy-ecs-image.sh
-#   DEPLOY_ENV=production TARGET_TENANTS=abc,xyz IMAGE_TAG=v1.0.0 ./scripts/deploy-ecs-image.sh
+#   DEPLOY_ENV=staging TARGET_TENANTS=base IMAGE_TAG=sha-abc1234 APP_ID=baz ./scripts/deploy-ecs-svc.sh
+#   DEPLOY_ENV=production TARGET_TENANTS=abc,xyz IMAGE_TAG=v1.0.0 ./scripts/deploy-ecs-svc.sh
 #
 # Env:
 #   DEPLOY_ENV (required): staging | production
@@ -24,7 +24,7 @@ export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-ap-southeast-1}"
 export AWS_REGION="${AWS_DEFAULT_REGION}"
 
 if [[ -z "$DEPLOY_ENV" || -z "$TARGET_TENANTS" || -z "$IMAGE_TAG" || -z "$APP_ID" ]]; then
-  echo "Usage: DEPLOY_ENV=staging|production TARGET_TENANTS=... IMAGE_TAG=... APP_ID=... ./scripts/deploy-ecs-image.sh" >&2
+  echo "Usage: DEPLOY_ENV=staging|production TARGET_TENANTS=... IMAGE_TAG=... APP_ID=... ./scripts/deploy-ecs-service.sh" >&2
   echo "  DEPLOY_ENV: staging or production" >&2
   echo "  TARGET_TENANTS: comma-separated tenant ids, or 'all' (then set TENANTS=abc,xyz)" >&2
   echo "  APP_ID: app to update (e.g. foo, baz)" >&2

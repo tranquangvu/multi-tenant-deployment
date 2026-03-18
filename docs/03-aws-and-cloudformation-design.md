@@ -115,7 +115,6 @@ Current layout (root stack per tenant/environment with nested stacks):
 ├── scripts/
 │   ├── deploy-stack.sh
 │   ├── deploy-tenant.sh
-│   ├── deploy-tenants.sh
 │   ├── get-tenant-envs.sh
 │   ├── get-tenant-region.sh
 │   └── upload-templates.sh
