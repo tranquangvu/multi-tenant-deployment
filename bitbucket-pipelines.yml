@@ -49,10 +49,10 @@ pipelines:
       - step: *upload-templates
       - step: *deploy-base-staging
       - step:
-        name: Approve Production Deployment
-        trigger: manual
-        script:
-          - echo "Approved, continue to production"
+          name: Approve Production Deployment
+          trigger: manual
+          script:
+            - echo "Approved, continue to production"
 
   custom:
     # Deploy root stack for one (tenant, environment). Base: staging or production; others: production only.
