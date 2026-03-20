@@ -14,7 +14,7 @@ definitions:
         script:
           - |
             if [[ -n "${BITBUCKET_STEP_OIDC_TOKEN:-}" ]]; then
-              echo "BITBUCKET_STEP_OIDC_TOKEN: $BITBUCKET_STEP_OIDC_TOKEN"
+              echo "OIDC verified"
             else
               echo "BITBUCKET_STEP_OIDC_TOKEN is missing"
               exit 1
@@ -58,13 +58,13 @@ pipelines:
   branches:
     main:
       - step: *oidc-verify
-      - step: *upload-templates
-      - step: *deploy-base-staging
-      - step:
-          name: Approve Production Deployment
-          trigger: manual
-          script:
-            - echo "Approved, continue to production"
+      # - step: *upload-templates
+      # - step: *deploy-base-staging
+      # - step:
+      #     name: Approve Production Deployment
+      #     trigger: manual
+      #     script:
+      #       - echo "Approved, continue to production"
 
   custom:
     # Deploy root stack for one (tenant, environment). Base: staging or production; others: production only.
