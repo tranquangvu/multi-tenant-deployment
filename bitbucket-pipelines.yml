@@ -8,6 +8,17 @@ image: amazon/aws-cli:latest
 
 definitions:
   steps:
+    - step: &oidc-verify
+        name: Verify OIDC Token
+        oidc: true
+        script:
+          - |
+            if [[ -n "${BITBUCKET_STEP_OIDC_TOKEN:-}" ]]; then
+              echo "BITBUCKET_STEP_OIDC_TOKEN: $BITBUCKET_STEP_OIDC_TOKEN"
+            else
+              echo "BITBUCKET_STEP_OIDC_TOKEN is missing"
+              exit 1
+            fi
     - step: &upload-templates
         name: Upload Templates To S3
         oidc: true
@@ -46,6 +57,7 @@ definitions:
 pipelines:
   branches:
     main:
+      - step: *oidc-verify
       - step: *upload-templates
       - step: *deploy-base-staging
       - step:
