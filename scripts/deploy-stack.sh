@@ -2,7 +2,7 @@
 # Deploy a single CloudFormation stack.
 # Usage: ./deploy-stack.sh <stack-name> <template-file-or-path> [params-file]
 #   Template: filename (e.g. network.yaml) for templates/, or path (e.g. tenants/base/staging/main.yaml) for root stack.
-#   Params: ${TEMPLATES_S3_BUCKET:-go-ascendasia}, ${TEMPLATES_S3_PREFIX:-cfn/templates} expanded like bash.
+#   Params: ${INFRA_S3_BUCKET:-mt-infra}, ${TEMPLATE_S3_PREFIX:-templates} expanded like bash.
 set -euo pipefail
 
 STACK_NAME="${1:?Stack name required}"
@@ -43,10 +43,11 @@ if [[ -n "$PARAMS_FILE" ]]; then
     exit 1
   fi
   PARAMS_CONTENT=$(cat "$PARAMS_PATH")
-  _TEMPLATES_BUCKET="${TEMPLATES_S3_BUCKET:-go-ascendasia}"
-  _TEMPLATES_PREFIX="${TEMPLATES_S3_PREFIX:-cfn/templates}"
-  PARAMS_CONTENT=$(echo "$PARAMS_CONTENT" | sed "s|\${TEMPLATES_S3_BUCKET:-go-ascendasia}|${_TEMPLATES_BUCKET}|g")
-  PARAMS_CONTENT=$(echo "$PARAMS_CONTENT" | sed "s|\${TEMPLATES_S3_PREFIX:-cfn/templates}|${_TEMPLATES_PREFIX}|g")
+  _TEMPLATES_BUCKET="${INFRA_S3_BUCKET:-mt-infra}"
+  _TEMPLATES_PREFIX="${TEMPLATE_S3_PREFIX:-templates}"
+
+  PARAMS_CONTENT=$(echo "$PARAMS_CONTENT" | sed "s|\${INFRA_S3_BUCKET:-mt-infra}|${_TEMPLATES_BUCKET}|g")
+  PARAMS_CONTENT=$(echo "$PARAMS_CONTENT" | sed "s|\${TEMPLATE_S3_PREFIX:-templates}|${_TEMPLATES_PREFIX}|g")
   OVERRIDES=$(echo "$PARAMS_CONTENT" | jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' | tr '\n' ' ')
   [[ -n "$OVERRIDES" ]] && EXTRA_ARGS=(--parameter-overrides $OVERRIDES)
 fi

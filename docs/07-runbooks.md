@@ -9,7 +9,7 @@ Short operational procedures for the multi-tenant deployment framework. Assumes 
 | `deploy-stack.sh` | Deploy a single CloudFormation stack. Usage: `./scripts/deploy-stack.sh <stack-name> <template-file> [params-file]`. Used by other scripts. Root stacks (main.yaml) get `CAPABILITY_AUTO_EXPAND`. Handles `ROLLBACK_COMPLETE` by deleting stack before deploy. |
 | `deploy-tenant.sh` | Deploy root stack (main.yaml) for a tenant and optional environment. Usage: `./scripts/deploy-tenant.sh <tenant-id> [environment]`. Omit environment to deploy all envs for that tenant. Examples: `./scripts/deploy-tenant.sh base`, `./scripts/deploy-tenant.sh base staging`, `./scripts/deploy-tenant.sh abc production`. Uses `config/tenant-registry.yaml`; only base supports staging. |
 | `deploy-shared.sh` | Deploy shared stacks (e.g. ECR repos via `shared/main.yaml`). Run once per account/region before deploying tenants. Usage: `AWS_DEFAULT_REGION=ap-southeast-1 ./scripts/deploy-shared.sh` or `./scripts/deploy-shared.sh [params-file]`. |
-| `upload-templates.sh` | Upload CloudFormation templates from `templates/` to S3. Optional env: `TEMPLATES_S3_BUCKET`, `TEMPLATES_S3_PREFIX`. Default bucket: `go-ascendasia`. |
+| `upload-templates.sh` | Upload CloudFormation templates from `templates/` to S3. Optional env: `INFRA_S3_BUCKET`, `TEMPLATE_S3_PREFIX`. Default bucket: `mt-infra`. |
 | `get-tenant-envs.sh` | List environments for a tenant from `config/tenant-registry.yaml`. Usage: `./scripts/get-tenant-envs.sh <tenant-id>`. |
 | `get-tenant-region.sh` | Output AWS region for a tenant from registry. Usage: `./scripts/get-tenant-region.sh <tenant-id>`. |
 
@@ -75,7 +75,7 @@ Short operational procedures for the multi-tenant deployment framework. Assumes 
 2. Add tenant to **tenant registry** (`config/tenant-registry.yaml` in this repo): add a new key (e.g. `new-tenant`) with `name`, `region`, `environments` (e.g. `[production]`), and `accounts` (environment → account ID) if using multi-account. See existing entries (base, abc, xyz) for the schema.
 3. Commit and merge registry change.
 4. **Shared stacks (new account)**: In that account/region, run once: `AWS_DEFAULT_REGION=<region> ./scripts/deploy-shared.sh`.
-5. **Templates**: Upload templates if using nested stacks: `./scripts/upload-templates.sh` (set `TEMPLATES_S3_BUCKET` / `TEMPLATES_S3_PREFIX` if needed).
+5. **Templates**: Upload templates if using nested stacks: `./scripts/upload-templates.sh` (set `INFRA_S3_BUCKET` / `TEMPLATE_S3_PREFIX` if needed).
 6. **Tenant stacks**: Create `tenants/<tenant-id>/production/main.yaml` and `params.json` (or staging if applicable), then run `./scripts/deploy-tenant.sh new-tenant production`.
 7. Store secrets (DB, app config) in that account’s Secrets Manager (or Parameter Store).
 8. When ready, include this tenant in promotion (e.g. run `./scripts/deploy-tenant.sh new-tenant production` or add it to your pipeline promotion list).

@@ -14,12 +14,12 @@ Parameters:
     Type: String
     Default: mt
     Description: Prefix for stack and resource names
-  TemplatesS3Bucket:
+  TemplateS3Bucket:
     Type: String
     Description: S3 bucket where CloudFormation templates are uploaded
-  TemplatesS3Prefix:
+  TemplateS3Prefix:
     Type: String
-    Default: cfn/templates
+    Default: templates
     Description: S3 prefix (key prefix) for template files
   VpcCidr:
     Type: String
@@ -48,7 +48,7 @@ Resources:
   NetworkStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/network.yaml"
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/network.yaml"
       Parameters:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
@@ -59,7 +59,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: NetworkStack
     Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/security.yaml"
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/security.yaml"
       Parameters:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
@@ -72,7 +72,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: SecurityStack
     Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/secrets.yaml"
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/secrets.yaml"
       Parameters:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
@@ -83,7 +83,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: SecurityStack
     Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/secrets.yaml"
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/secrets.yaml"
       Parameters:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
@@ -94,7 +94,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: SecurityStack
     Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecs-cluster.yaml"
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/ecs-cluster.yaml"
       Parameters:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
@@ -107,7 +107,7 @@ Resources:
       - SecurityStack
       - SecretsFooAppStack
     Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/rds.yaml"
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/rds.yaml"
       Parameters:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
@@ -122,7 +122,7 @@ Resources:
       - SecurityStack
       - SecretsBazAppStack
     Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/rds.yaml"
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/rds.yaml"
       Parameters:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
@@ -134,7 +134,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: SecurityStack
     Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/alb.yaml"
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/alb.yaml"
       Parameters:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
@@ -147,7 +147,7 @@ Resources:
       - EcsClusterStack
       - RdsFooAppStack
     Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecs-service.yaml"
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/ecs-service.yaml"
       Parameters:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
@@ -169,7 +169,7 @@ Resources:
       - EcsClusterStack
       - RdsBazAppStack
     Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecs-service.yaml"
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/ecs-service.yaml"
       Parameters:
         TenantId: !Ref TenantId
         Environment: !Ref Environment

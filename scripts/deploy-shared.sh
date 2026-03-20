@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deploy shared stacks (ECR repos per app via nested shared/main.yaml). Run once per account/region before deploying tenants.
 # Usage: ./deploy-shared.sh [params-file]
-#   Params file defaults to shared/params.json (must include StackPrefix, TemplatesS3Bucket, TemplatesS3Prefix).
+#   Params file defaults to shared/params.json (must include StackPrefix, TemplateS3Bucket, TemplateS3Prefix).
 #   Uses AWS_DEFAULT_REGION; set it or run in an environment that has it.
 # Example: AWS_DEFAULT_REGION=ap-southeast-1 ./deploy-shared.sh
 set -euo pipefail

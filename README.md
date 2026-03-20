@@ -11,7 +11,7 @@
 - **`shared/`** — Shared resources: ECR repositories per app via **`shared/main.yaml`** (nested stacks from S3). Deploy with **`./scripts/deploy-shared.sh`** once per account/region; tenant stacks import ECR URI via CloudFormation export.
 - **`tenants/<tenant-id>/<staging|production>/`** — Per-tenant, per-environment:
   - **`main.yaml`** — Root stack that references module templates via **TemplateURL** (S3). Deploys nested stacks for each module.
-  - **`params.json`** — Parameters for the root stack (TenantId, Environment, StackPrefix, TemplatesS3Bucket, TemplatesS3Prefix, app desired counts, etc.).
+  - **`params.json`** — Parameters for the root stack (TenantId, Environment, StackPrefix, TemplateS3Bucket, TemplateS3Prefix, app desired counts, etc.).
 - **`scripts/`** — Deployment and helpers:
   - `deploy-shared.sh` — Deploy shared stack (ECR per app); run once per account/region.
   - `upload-templates.sh` — Upload `templates/*.yaml` to S3.
@@ -72,7 +72,7 @@ All root stacks (shared and per-tenant) pull module templates from S3. Upload te
 1. **Upload templates to S3** (required after template changes):
 
    ```bash
-   export TEMPLATES_S3_BUCKET=your-cfn-templates-bucket   # optional; default go-ascendasia
+   export INFRA_S3_BUCKET=your-s3-bucket   # optional; default mt-infra
    ./scripts/upload-templates.sh
    ```
 
@@ -99,7 +99,7 @@ All root stacks (shared and per-tenant) pull module templates from S3. Upload te
    **Option B — Manual stack name and paths:** set region first, then:
 
    ```bash
-   export TEMPLATES_S3_BUCKET=your-cfn-templates-bucket
+   export INFRA_S3_BUCKET=your-s3-bucket
    export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
    ./scripts/deploy-stack.sh mt-base-staging tenants/base/staging/main.yaml tenants/base/staging/params.json
    ./scripts/deploy-stack.sh mt-base-production tenants/base/production/main.yaml tenants/base/production/params.json
@@ -107,11 +107,11 @@ All root stacks (shared and per-tenant) pull module templates from S3. Upload te
    ./scripts/deploy-stack.sh mt-xyz-production tenants/xyz/production/main.yaml tenants/xyz/production/params.json
    ```
 
-   **deploy-stack.sh** accepts a template path (e.g. `tenants/base/staging/main.yaml`) or a template filename (e.g. `network.yaml` for `templates/`). Params can use `${TEMPLATES_S3_BUCKET:-go-ascendasia}` and `${TEMPLATES_S3_PREFIX:-cfn/templates}`; **deploy-stack.sh** resolves them. Root stacks (main.yaml) get `CAPABILITY_AUTO_EXPAND`; stacks in `ROLLBACK_COMPLETE` are deleted before deploy.
+   **deploy-stack.sh** accepts a template path (e.g. `tenants/base/staging/main.yaml`) or a template filename (e.g. `network.yaml` for `templates/`). Params can use `${INFRA_S3_BUCKET:-mt-infra}` and `${TEMPLATE_S3_PREFIX:-templates}`; **deploy-stack.sh** resolves them. Root stacks (main.yaml) get `CAPABILITY_AUTO_EXPAND`; stacks in `ROLLBACK_COMPLETE` are deleted before deploy.
 
 ## Bitbucket pipeline
 
-- **Repository variables:** `TEMPLATES_S3_BUCKET` (default `go-ascendasia`), `AWS_ROLE_ARN` for OIDC.
+- **Repository variables:** `INFRA_S3_BUCKET` (default `mt-infra`), `TEMPLATE_S3_PREFIX` (default `templates`), `AWS_ROLE_ARN` for OIDC.
 - **main branch:** Upload templates → Deploy shared → Deploy base staging (root stack). Base production is available as a manual step (commented out by default).
 - **Custom `deploy-tenant`:** Variables `DEPLOY_TENANT_ID` (default `base`), `DEPLOY_ENVIRONMENT` (default `staging`). Uploads templates, deploys shared, then deploys root stack for the chosen tenant/environment.
 - **Custom `promote-tenants`:** Variable `PROMOTE_TENANTS` (e.g. `abc`, `abc,xyz`, or `all`). Manual trigger. Uploads templates, then for each tenant deploys shared and root stack for production.

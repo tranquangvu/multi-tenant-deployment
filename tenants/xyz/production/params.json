@@ -2,8 +2,8 @@
   { "ParameterKey": "TenantId", "ParameterValue": "xyz" },
   { "ParameterKey": "StackPrefix", "ParameterValue": "mt" },
   { "ParameterKey": "Environment", "ParameterValue": "production" },
-  { "ParameterKey": "TemplatesS3Bucket", "ParameterValue": "${TEMPLATES_S3_BUCKET:-go-ascendasia}" },
-  { "ParameterKey": "TemplatesS3Prefix", "ParameterValue": "${TEMPLATES_S3_PREFIX:-cfn/templates}" },
+  { "ParameterKey": "TemplateS3Bucket", "ParameterValue": "${INFRA_S3_BUCKET:-mt-infra}" },
+  { "ParameterKey": "TemplateS3Prefix", "ParameterValue": "${TEMPLATE_S3_PREFIX:-templates}" },
   { "ParameterKey": "FooAppDesiredCount", "ParameterValue": "0" },
   { "ParameterKey": "BazAppDesiredCount", "ParameterValue": "0" }
 ]

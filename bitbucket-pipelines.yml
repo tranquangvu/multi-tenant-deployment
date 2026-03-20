@@ -2,7 +2,7 @@
 # 1) Upload templates to S3  2) Deploy root stack (main.yaml) per tenant/env.
 # Base has staging + production; other tenants (abc, xyz) have production only.
 # OIDC: set AWS_ROLE_ARN in each deployment environment (and repo var for upload-templates).
-# Repo variables: TEMPLATES_S3_BUCKET, AWS_ROLE_ARN (for upload-templates).
+# Repo variables: INFRA_S3_BUCKET, TEMPLATE_S3_PREFIX, CONFIG_S3_PREFIX, AWS_ROLE_ARN (for upload-templates).
 
 image: amazon/aws-cli:latest
 
@@ -14,21 +14,19 @@ definitions:
         script:
           - |
             if [[ -n "${BITBUCKET_STEP_OIDC_TOKEN:-}" ]]; then
-              echo "OIDC verified"
+              echo "OIDC token provided"
             else
-              echo "BITBUCKET_STEP_OIDC_TOKEN is missing"
+              echo "OIDC token is missing"
               exit 1
             fi
     - step: &upload-templates
-        name: Upload Templates To S3
+        name: Upload Templates & Config To S3
         oidc: true
         script:
           - chmod +x ./scripts/*.sh
           - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
           - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
-          - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET:-go-ascendasia}"
-          - export TEMPLATES_S3_PREFIX="${TEMPLATES_S3_PREFIX:-cfn/templates}"
-          - ./scripts/upload-templates.sh
+          - ./scripts/s3-upload.sh
 
     - step: &deploy-base-staging
         name: Deploy Base Staging
@@ -37,7 +35,6 @@ definitions:
           - chmod +x ./scripts/*.sh
           - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
           - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
-          - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET:-go-ascendasia}"
           - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
           - export AWS_REGION="$AWS_DEFAULT_REGION"
           - ./scripts/deploy-shared.sh
@@ -82,7 +79,6 @@ pipelines:
             - chmod +x ./scripts/*.sh
             - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
             - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
-            - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET:-go-ascendasia}"
             - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh $DEPLOY_TENANT_ID)"
             - export AWS_REGION="$AWS_DEFAULT_REGION"
             - ./scripts/deploy-shared.sh
@@ -133,7 +129,6 @@ pipelines:
             - chmod +x ./scripts/*.sh
             - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
             - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
-            - export TEMPLATES_S3_BUCKET="${TEMPLATES_S3_BUCKET:-go-ascendasia}"
             - |
               if [[ -z "$TARGET_TENANTS" ]]; then
                 echo "Set TARGET_TENANTS (e.g. abc,xyz or 'all')"

@@ -6,19 +6,19 @@ Parameters:
     Type: String
     Default: mt
     Description: Prefix for stack and resource names
-  TemplatesS3Bucket:
+  TemplateS3Bucket:
     Type: String
     Description: S3 bucket where CloudFormation templates are uploaded
-  TemplatesS3Prefix:
+  TemplateS3Prefix:
     Type: String
-    Default: cfn/templates
+    Default: templates
     Description: S3 prefix (key prefix) for template files
 
 Resources:
   FooEcrStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecr.yaml"
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/ecr.yaml"
       Parameters:
         StackPrefix: !Ref StackPrefix
         AppId: foo
@@ -26,7 +26,7 @@ Resources:
   BazEcrStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesS3Bucket}/${TemplatesS3Prefix}/ecr.yaml"
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/ecr.yaml"
       Parameters:
         StackPrefix: !Ref StackPrefix
         AppId: baz
