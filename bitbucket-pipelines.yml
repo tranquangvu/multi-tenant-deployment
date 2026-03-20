@@ -1,8 +1,8 @@
 # Bitbucket Pipelines — Infrastructure repo (multi-tenant CloudFormation)
 # 1) Upload templates to S3  2) Deploy root stack (main.yaml) per tenant/env.
 # Base has staging + production; other tenants (abc, xyz) have production only.
-# OIDC: set AWS_ROLE_ARN in each deployment environment (and repo var for upload-templates).
-# Repo variables: INFRA_S3_BUCKET, TEMPLATE_S3_PREFIX, CONFIG_S3_PREFIX, AWS_ROLE_ARN (for upload-templates).
+# OIDC: set AWS_ROLE_ARN in each deployment environment (and repo var for upload-config-templates).
+# Repo variables: INFRA_S3_BUCKET, TEMPLATE_S3_PREFIX, CONFIG_S3_PREFIX, AWS_ROLE_ARN (for upload-config-templates).
 
 image: amazon/aws-cli:latest
 
@@ -19,14 +19,14 @@ definitions:
               echo "OIDC token is missing"
               exit 1
             fi
-    - step: &upload-templates
-        name: Upload Templates & Config To S3
+    - step: &upload-config-templates
+        name: Upload Config & Templates To S3
         oidc: true
         script:
           - chmod +x ./scripts/*.sh
           - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
           - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
-          - ./scripts/s3-upload.sh
+          - ./scripts/upload-config-templates.sh
 
     - step: &deploy-base-staging
         name: Deploy Base Staging
@@ -55,7 +55,7 @@ pipelines:
   branches:
     main:
       - step: *oidc-verify
-      # - step: *upload-templates
+      # - step: *upload-config-templates
       # - step: *deploy-base-staging
       # - step:
       #     name: Approve Production Deployment

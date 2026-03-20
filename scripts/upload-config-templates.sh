@@ -7,21 +7,11 @@ set -euo pipefail
 
 BUCKET="${INFRA_S3_BUCKET:-mt-infra}"
 TEMPLATE_PREFIX="${TEMPLATE_S3_PREFIX:-templates}"
+CONFIG_PREFIX="${CONFIG_S3_PREFIX:-config}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMPLATES_DIR="$(cd "$SCRIPT_DIR/../templates" && pwd)"
 CONFIG_DIR="$(cd "$SCRIPT_DIR/../config" && pwd)"
-
-# If TEMPLATE_S3_PREFIX ends with `templates`, default config prefix becomes `<base>/config`.
-# Handle both `cfn/templates` and bare `templates`.
-if [[ "${TEMPLATE_PREFIX}" == */templates ]]; then
-  DEFAULT_CONFIG_PREFIX="${TEMPLATE_PREFIX%/templates}/config"
-elif [[ "${TEMPLATE_PREFIX}" == "templates" ]]; then
-  DEFAULT_CONFIG_PREFIX="config"
-else
-  DEFAULT_CONFIG_PREFIX="${TEMPLATE_PREFIX%/}/config"
-fi
-CONFIG_PREFIX="${CONFIG_S3_PREFIX:-$DEFAULT_CONFIG_PREFIX}"
 
 echo "Uploading templates from $TEMPLATES_DIR to s3://$BUCKET/$TEMPLATE_PREFIX/"
 aws s3 cp "$TEMPLATES_DIR/" "s3://$BUCKET/$TEMPLATE_PREFIX/" --recursive --exclude "*" --include "*.yaml" --include "*.yml"
