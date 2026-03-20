@@ -55,13 +55,13 @@ pipelines:
   branches:
     main:
       - step: *oidc-verify
-      # - step: *upload-config-templates
-      # - step: *deploy-base-staging
-      # - step:
-      #     name: Approve Production Deployment
-      #     trigger: manual
-      #     script:
-      #       - echo "Approved, continue to production"
+      - step: *upload-config-templates
+      - step: *deploy-base-staging
+      - step:
+          name: Approve Production Deployment
+          trigger: manual
+          script:
+            - echo "Approved, continue to production"
 
   custom:
     # Deploy root stack for one (tenant, environment). Base: staging or production; others: production only.
