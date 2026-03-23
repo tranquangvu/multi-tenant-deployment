@@ -152,7 +152,7 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        EcrRepoUri: nginx
+        EcrRepoUri: nginxinc/nginx-unprivileged
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupFooArn
         DesiredCount: !Ref FooAppDesiredCount
         DbEndpoint: localhost
@@ -172,7 +172,7 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        EcrRepoUri: nginx
+        EcrRepoUri: nginxinc/nginx-unprivileged
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazArn
         DesiredCount: !Ref BazAppDesiredCount
         DbEndpoint: localhost
