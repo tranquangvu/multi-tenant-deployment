@@ -100,35 +100,36 @@ Resources:
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
 
-  RdsFooAppStack:
-    Type: AWS::CloudFormation::Stack
-    DependsOn:
-      - NetworkStack
-      - SecurityStack
-      - SecretsFooAppStack
-    Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/rds.yaml"
-      Parameters:
-        TenantId: !Ref TenantId
-        Environment: !Ref Environment
-        StackPrefix: !Ref StackPrefix
-        AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
-        AppId: foo
+  # RDS stacks are temporarily disabled while validating ECS with nginx images.
+  # RdsFooAppStack:
+  #   Type: AWS::CloudFormation::Stack
+  #   DependsOn:
+  #     - NetworkStack
+  #     - SecurityStack
+  #     - SecretsFooAppStack
+  #   Properties:
+  #     TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/rds.yaml"
+  #     Parameters:
+  #       TenantId: !Ref TenantId
+  #       Environment: !Ref Environment
+  #       StackPrefix: !Ref StackPrefix
+  #       AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
+  #       AppId: foo
 
-  RdsBazAppStack:
-    Type: AWS::CloudFormation::Stack
-    DependsOn:
-      - NetworkStack
-      - SecurityStack
-      - SecretsBazAppStack
-    Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/rds.yaml"
-      Parameters:
-        TenantId: !Ref TenantId
-        Environment: !Ref Environment
-        StackPrefix: !Ref StackPrefix
-        AppSecretArn: !GetAtt SecretsBazAppStack.Outputs.AppSecretArn
-        AppId: baz
+  # RdsBazAppStack:
+  #   Type: AWS::CloudFormation::Stack
+  #   DependsOn:
+  #     - NetworkStack
+  #     - SecurityStack
+  #     - SecretsBazAppStack
+  #   Properties:
+  #     TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/rds.yaml"
+  #     Parameters:
+  #       TenantId: !Ref TenantId
+  #       Environment: !Ref Environment
+  #       StackPrefix: !Ref StackPrefix
+  #       AppSecretArn: !GetAtt SecretsBazAppStack.Outputs.AppSecretArn
+  #       AppId: baz
 
   AlbStack:
     Type: AWS::CloudFormation::Stack
@@ -145,20 +146,18 @@ Resources:
     DependsOn:
       - AlbStack
       - EcsClusterStack
-      - RdsFooAppStack
     Properties:
       TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/ecs-service.yaml"
       Parameters:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        EcrRepoUri: !ImportValue
-          Fn::Sub: "${StackPrefix}-foo-EcrRepoUri"
+        EcrRepoUri: nginx
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupFooArn
         DesiredCount: !Ref FooAppDesiredCount
-        DbEndpoint: !GetAtt RdsFooAppStack.Outputs.DbEndpoint
-        DbPort: !GetAtt RdsFooAppStack.Outputs.DbPort
-        DbName: !GetAtt RdsFooAppStack.Outputs.DbName
+        DbEndpoint: localhost
+        DbPort: "5432"
+        DbName: app
         AppId: foo
         AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
 
@@ -167,20 +166,18 @@ Resources:
     DependsOn:
       - AlbStack
       - EcsClusterStack
-      - RdsBazAppStack
     Properties:
       TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/ecs-service.yaml"
       Parameters:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        EcrRepoUri: !ImportValue
-          Fn::Sub: "${StackPrefix}-baz-EcrRepoUri"
+        EcrRepoUri: nginx
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazArn
         DesiredCount: !Ref BazAppDesiredCount
-        DbEndpoint: !GetAtt RdsBazAppStack.Outputs.DbEndpoint
-        DbPort: !GetAtt RdsBazAppStack.Outputs.DbPort
-        DbName: !GetAtt RdsBazAppStack.Outputs.DbName
+        DbEndpoint: localhost
+        DbPort: "5432"
+        DbName: app
         AppId: baz
         AppSecretArn: !GetAtt SecretsBazAppStack.Outputs.AppSecretArn
 
