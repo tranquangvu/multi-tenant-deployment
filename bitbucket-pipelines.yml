@@ -73,7 +73,7 @@ pipelines:
           - name: DEPLOY_ENVIRONMENT
             default: staging
       - step:
-          name: Upload templates then deploy $DEPLOY_TENANT_ID / $DEPLOY_ENVIRONMENT
+          name: Deploy tenant
           oidc: true
           script:
             - chmod +x ./scripts/*.sh
