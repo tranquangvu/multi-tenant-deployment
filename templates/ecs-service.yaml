@@ -25,13 +25,15 @@ Parameters:
     Description: "(Optional) ALB target group ARN to attach this service to. Leave empty for no ALB."
   DbEndpoint:
     Type: String
+    Default: ""
     Description: RDS endpoint hostname (from RDS module output DbEndpoint). Used to build DATABASE_* env vars.
   DbPort:
     Type: String
-    Default: "5432"
+    Default: ""
     Description: RDS port (from RDS module output DbPort).
   DbName:
     Type: String
+    Default: ""
     Description: RDS database name (from RDS module output DbName).
   AppSecretArn:
     Type: String

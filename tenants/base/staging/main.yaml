@@ -115,21 +115,6 @@ Resources:
         AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
         AppId: foo
 
-  # RdsBazAppStack:
-  #   Type: AWS::CloudFormation::Stack
-  #   DependsOn:
-  #     - NetworkStack
-  #     - SecurityStack
-  #     - SecretsBazAppStack
-  #   Properties:
-  #     TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/rds.yaml"
-  #     Parameters:
-  #       TenantId: !Ref TenantId
-  #       Environment: !Ref Environment
-  #       StackPrefix: !Ref StackPrefix
-  #       AppSecretArn: !GetAtt SecretsBazAppStack.Outputs.AppSecretArn
-  #       AppId: baz
-
   AlbStack:
     Type: AWS::CloudFormation::Stack
     DependsOn: SecurityStack
@@ -175,9 +160,6 @@ Resources:
         ImageUri: nginxinc/nginx-unprivileged
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazArn
         DesiredCount: !Ref BazAppDesiredCount
-        DbEndpoint: localhost
-        DbPort: "5432"
-        DbName: app
         AppId: baz
         AppSecretArn: !GetAtt SecretsBazAppStack.Outputs.AppSecretArn
 

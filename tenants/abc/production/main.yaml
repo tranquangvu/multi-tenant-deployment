@@ -172,9 +172,6 @@ Resources:
           Fn::Sub: "${StackPrefix}-baz-EcrRepoUri"
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazArn
         DesiredCount: !Ref BazAppDesiredCount
-        DbEndpoint: !GetAtt RdsBazAppStack.Outputs.DbEndpoint
-        DbPort: !GetAtt RdsBazAppStack.Outputs.DbPort
-        DbName: !GetAtt RdsBazAppStack.Outputs.DbName
         AppId: baz
         AppSecretArn: !GetAtt SecretsBazAppStack.Outputs.AppSecretArn
 
