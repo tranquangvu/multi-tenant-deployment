@@ -143,8 +143,8 @@ Resources:
         DbEndpoint: !GetAtt RdsFooAppStack.Outputs.DbEndpoint
         DbPort: !GetAtt RdsFooAppStack.Outputs.DbPort
         DbName: !GetAtt RdsFooAppStack.Outputs.DbName
-        AppId: foo
         AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
+        AppId: foo
 
   EcsBazAppStack:
     Type: AWS::CloudFormation::Stack
@@ -157,11 +157,12 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        ImageUri: nginxinc/nginx-unprivileged
+        ImageUri: !ImportValue
+          Fn::Sub: "${StackPrefix}-baz-EcrRepoUri"
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazArn
         DesiredCount: !Ref BazAppDesiredCount
-        AppId: baz
         AppSecretArn: !GetAtt SecretsBazAppStack.Outputs.AppSecretArn
+        AppId: baz
 
 Outputs:
   NetworkStackId:

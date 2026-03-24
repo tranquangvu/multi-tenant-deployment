@@ -9,6 +9,9 @@ Parameters:
     Type: String
     AllowedValues: [staging, production]
     Description: Environment (staging or production)
+  AppSecretArn:
+    Type: String
+    Description: ARN of the app secret (from secrets module). Used for DATABASE_USER and DATABASE_PASSWORD only.
   AppId:
     Type: String
     Description: Application ID (foo, baz)
@@ -35,9 +38,6 @@ Parameters:
     Type: String
     Default: ""
     Description: RDS database name (from RDS module output DbName).
-  AppSecretArn:
-    Type: String
-    Description: ARN of the app secret (from secrets module). Used for DATABASE_USER and DATABASE_PASSWORD only.
   TaskCpu:
     Type: String
     Default: "256"

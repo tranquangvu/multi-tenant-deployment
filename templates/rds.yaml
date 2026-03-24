@@ -9,6 +9,9 @@ Parameters:
     Type: String
     AllowedValues: [staging, production]
     Description: Environment (staging or production)
+  AppSecretArn:
+    Type: String
+    Description: ARN of the app secret (from secrets module for this app)
   AppId:
     Type: String
     Description: Application ID (foo, baz)
@@ -30,9 +33,6 @@ Parameters:
     MinValue: 20
     MaxValue: 65536
     Description: Allocated storage (GB)
-  AppSecretArn:
-    Type: String
-    Description: ARN of the app secret (from secrets module for this app)
   EngineVersion:
     Type: String
     Default: "15"
