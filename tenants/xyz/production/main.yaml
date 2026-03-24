@@ -146,7 +146,7 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        EcrRepoUri: !ImportValue
+        ImageUri: !ImportValue
           Fn::Sub: "${StackPrefix}-foo-EcrRepoUri"
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupFooArn
         DesiredCount: !Ref FooAppDesiredCount
@@ -168,7 +168,7 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
-        EcrRepoUri: !ImportValue
+        ImageUri: !ImportValue
           Fn::Sub: "${StackPrefix}-baz-EcrRepoUri"
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazArn
         DesiredCount: !Ref BazAppDesiredCount

@@ -16,9 +16,9 @@ Parameters:
     Type: String
     Default: mt
     Description: Prefix for stack and resource names
-  EcrRepoUri:
+  ImageUri:
     Type: String
-    Description: ECR repository URI (from ecr module output). Image will use :latest.
+    Description: Container image reference (for example, repo/image:tag). If no tag is provided, runtime defaults to latest.
   TargetGroupArn:
     Type: String
     Default: ""
@@ -36,11 +36,11 @@ Parameters:
   AppSecretArn:
     Type: String
     Description: ARN of the app secret (from secrets module). Used for DATABASE_USER and DATABASE_PASSWORD only.
-  AppCpu:
+  TaskCpu:
     Type: String
     Default: "256"
     Description: CPU units for Fargate task
-  AppMemory:
+  TaskMemory:
     Type: String
     Default: "512"
     Description: Memory (MB) for Fargate task
@@ -124,13 +124,13 @@ Resources:
       Family: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}"
       NetworkMode: awsvpc
       RequiresCompatibilities: [FARGATE]
-      Cpu: !Ref AppCpu
-      Memory: !Ref AppMemory
+      Cpu: !Ref TaskCpu
+      Memory: !Ref TaskMemory
       ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
       TaskRoleArn: !GetAtt TaskRole.Arn
       ContainerDefinitions:
         - Name: !Ref AppId
-          Image: !Sub "${EcrRepoUri}:latest"
+          Image: !Ref ImageUri
           Essential: true
           LogConfiguration:
             LogDriver: awslogs
@@ -149,6 +149,8 @@ Resources:
             StartPeriod: 60
           # RDS connection from stack outputs; app can build DATABASE_URL as postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}
           Environment:
+            - Name: PORT
+              Value: 8080
             - Name: DATABASE_HOST
               Value: !Ref DbEndpoint
             - Name: DATABASE_PORT
