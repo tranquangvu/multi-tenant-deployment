@@ -107,11 +107,8 @@ Resources:
       Port: 80
       Protocol: HTTP
       DefaultActions:
-        - Type: fixed-response
-          FixedResponseConfig:
-            StatusCode: "200"
-            ContentType: "application/json"
-            MessageBody: '{"message":"ok"}'
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupFoo
 
   ListenerRuleFoo:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -119,11 +116,11 @@ Resources:
       ListenerArn: !Ref Listener
       Priority: 5
       Conditions:
-        - Field: path-pattern
-          PathPatternConfig:
+        - Field: http-header
+          HttpHeaderConfig:
+            HttpHeaderName: X-App
             Values:
-              - "/foo/*"
-              - "/foo"
+              - "foo"
       Actions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupFoo
@@ -134,11 +131,11 @@ Resources:
       ListenerArn: !Ref Listener
       Priority: 6
       Conditions:
-        - Field: path-pattern
-          PathPatternConfig:
+        - Field: http-header
+          HttpHeaderConfig:
+            HttpHeaderName: X-App
             Values:
-              - "/baz/*"
-              - "/baz"
+              - "baz"
       Actions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupBaz
