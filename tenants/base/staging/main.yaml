@@ -100,21 +100,20 @@ Resources:
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
 
-  # RDS stacks are temporarily disabled while validating ECS with nginx images.
-  # RdsFooAppStack:
-  #   Type: AWS::CloudFormation::Stack
-  #   DependsOn:
-  #     - NetworkStack
-  #     - SecurityStack
-  #     - SecretsFooAppStack
-  #   Properties:
-  #     TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/rds.yaml"
-  #     Parameters:
-  #       TenantId: !Ref TenantId
-  #       Environment: !Ref Environment
-  #       StackPrefix: !Ref StackPrefix
-  #       AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
-  #       AppId: foo
+  RdsFooAppStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - NetworkStack
+      - SecurityStack
+      - SecretsFooAppStack
+    Properties:
+      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/rds.yaml"
+      Parameters:
+        TenantId: !Ref TenantId
+        Environment: !Ref Environment
+        StackPrefix: !Ref StackPrefix
+        AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
+        AppId: foo
 
   # RdsBazAppStack:
   #   Type: AWS::CloudFormation::Stack
@@ -156,9 +155,9 @@ Resources:
           Fn::Sub: "${StackPrefix}-foo-EcrRepoUri"
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupFooArn
         DesiredCount: !Ref FooAppDesiredCount
-        DbEndpoint: localhost
-        DbPort: "5432"
-        DbName: app
+        DbEndpoint: !GetAtt RdsFooAppStack.Outputs.DbEndpoint
+        DbPort: !GetAtt RdsFooAppStack.Outputs.DbPort
+        DbName: !GetAtt RdsFooAppStack.Outputs.DbName
         AppId: foo
         AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
 
