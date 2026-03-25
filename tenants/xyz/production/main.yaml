@@ -109,20 +109,6 @@ Resources:
         PrivateSubnet1Id: !Ref PrivateSubnet1SsmPath
         PrivateSubnet2Id: !Ref PrivateSubnet2SsmPath
 
-  RdsBazAppStack:
-    Type: AWS::CloudFormation::Stack
-    DependsOn: SecretsBazAppStack
-    Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/rds.yaml"
-      Parameters:
-        TenantId: !Ref TenantId
-        Environment: !Ref Environment
-        StackPrefix: !Ref StackPrefix
-        AppSecretArn: !GetAtt SecretsBazAppStack.Outputs.AppSecretArn
-        AppId: baz
-        PrivateSubnet1Id: !Ref PrivateSubnet1SsmPath
-        PrivateSubnet2Id: !Ref PrivateSubnet2SsmPath
-
   AlbStack:
     Type: AWS::CloudFormation::Stack
     DependsOn: SecurityStack
@@ -168,7 +154,6 @@ Resources:
     DependsOn:
       - AlbStack
       - EcsClusterStack
-      - RdsBazAppStack
     Properties:
       TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/ecs-service.yaml"
       Parameters:
