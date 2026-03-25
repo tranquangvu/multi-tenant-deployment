@@ -8,27 +8,43 @@
 
 tenants:
   base:
+    id: base
     name: Base
     region: ap-southeast-1
-    environments: [staging, production]
-    # Future (Landing Zone): account per environment
-    # accounts:
-    #   staging: "111111111111"
-    #   production: "222222222222"
-    # deployment_role_arn: "arn:aws:iam::${account_id}:role/OrganizationAccountAccessRole"
+    environments:
+      staging:
+        accountId: '862344888019'
+        accountName: 'Sanbox'
+        networkVpcName: 'Sanbox-VPC'
+        networkPublicSubnetNames: ['PrivateTestA', 'Sanbox-Subnet-2']
+        networkPrivateSubnetNames: ['PublicInboundA', 'PublicInboundB']
+      production:
+        accountId: '862344888019'
+        accountName: 'Sanbox'
+        networkVpcName: 'Sanbox-VPC'
+        networkPublicSubnetNames: ['PrivateTestA', 'Sanbox-Subnet-2']
+        networkPrivateSubnetNames: ['PublicInboundA', 'PublicInboundB']
 
   abc:
+    id: abc
     name: ABC
     region: ap-southeast-1
-    environments: [production]
-    # accounts:
-    #   production: "333333333333"
-    # deployment_role_arn: "arn:aws:iam::${account_id}:role/OrganizationAccountAccessRole"
+    environments:
+      production:
+        accountId: '862344888019'
+        accountName: 'Sanbox'
+        networkVpcName: 'Sanbox-VPC'
+        networkPublicSubnetNames: ['PrivateTestA', 'Sanbox-Subnet-2']
+        networkPrivateSubnetNames: ['PublicInboundA', 'PublicInboundB']
 
   xyz:
+    id: xyz
     name: XYZ
     region: ap-southeast-1
-    environments: [production]
-    # accounts:
-    #   production: "444444444444"
-    # deployment_role_arn: "arn:aws:iam::${account_id}:role/OrganizationAccountAccessRole"
+    environments:
+      production:
+        accountId: '862344888019'
+        accountName: 'Sanbox'
+        networkVpcName: 'Sanbox-VPC'
+        networkPublicSubnetNames: ['PrivateTestA', 'Sanbox-Subnet-2']
+        networkPrivateSubnetNames: ['PublicInboundA', 'PublicInboundB']
