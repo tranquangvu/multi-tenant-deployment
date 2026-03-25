@@ -155,3 +155,90 @@ Pipeline uses OIDC (`oidc: true`); set `AWS_ROLE_ARN` in repo or deployment envi
 ## Multi-account
 
 Use one S3 bucket per account (or a shared bucket with prefix per account). Run upload and deploy in the target account (or after assuming the tenant role). Tenant environment metadata (including `accountId`) is tracked in `config/tenant-registry.yaml` under `tenants.<tenant>.environments.<env>`. See [docs/02-architecture-and-tenant-model.md](docs/02-architecture-and-tenant-model.md) and [docs/07-runbooks.md](docs/07-runbooks.md).
+
+```mermaid
+flowchart LR
+  %% Root stacks resolve VPC/subnet IDs from Landing Zone SSM paths
+  subgraph LZ[Landing Zone (Networking via SSM)]
+    direction TB
+    VPC[/SSM: /accelerator/network/vpc/{networkVpcName}/id (resolved)/]
+    Pub1[/SSM: /accelerator/network/vpc/{networkVpcName}/subnet/{PublicSubnet1}/id (resolved)/]
+    Pub2[/SSM: /accelerator/network/vpc/{networkVpcName}/subnet/{PublicSubnet2}/id (resolved)/]
+    Priv1[/SSM: /accelerator/network/vpc/{networkVpcName}/subnet/{PrivateSubnet1}/id (resolved)/]
+    Priv2[/SSM: /accelerator/network/vpc/{networkVpcName}/subnet/{PrivateSubnet2}/id (resolved)/]
+  end
+
+  subgraph BASE[Account: base (TenantId=base)]
+    direction TB
+    BaseStaging[Root: mt-base-staging]
+    BaseProd[Root: mt-base-production]
+
+    BaseStaging --> Sec1[SecurityStack]
+    BaseStaging --> Alb1[AlbStack]
+    BaseStaging --> Cluster1[EcsClusterStack]
+    BaseStaging --> RdsFoo1[RDS Stack: foo-app]
+    BaseStaging --> RdsBaz1[RDS Stack: baz-app]
+    BaseStaging --> EcsFoo1[ECS Service: foo-app (Fargate)]
+    BaseStaging --> EcsBaz1[ECS Service: baz-app (Fargate)]
+
+    Alb1 --> TF1[TargetGroup: foo:8080]
+    Alb1 --> TG2[TargetGroup: baz:8080]
+    TF1 --> EcsFoo1
+    TG2 --> EcsBaz1
+    RdsFoo1 --> EcsFoo1
+    RdsBaz1 --> EcsBaz1
+
+    BaseProd --> Sec2[SecurityStack]
+    BaseProd --> Alb2[AlbStack]
+    BaseProd --> Cluster2[EcsClusterStack]
+    BaseProd --> RdsFoo2[RDS Stack: foo-app]
+    BaseProd --> RdsBaz2[RDS Stack: baz-app]
+    BaseProd --> EcsFoo2[ECS Service: foo-app (Fargate)]
+    BaseProd --> EcsBaz2[ECS Service: baz-app (Fargate)]
+
+    Alb2 --> TF3[TargetGroup: foo:8080]
+    Alb2 --> TG4[TargetGroup: baz:8080]
+    TF3 --> EcsFoo2
+    TG4 --> EcsBaz2
+    RdsFoo2 --> EcsFoo2
+    RdsBaz2 --> EcsBaz2
+  end
+
+  subgraph ABC[Account: abc (TenantId=abc)]
+    direction TB
+    AbcProd[Root: mt-abc-production]
+    AbcProd --> Sec3[SecurityStack]
+    AbcProd --> Alb3[AlbStack]
+    AbcProd --> Cluster3[EcsClusterStack]
+    AbcProd --> RdsFoo3[RDS Stack: foo-app]
+    AbcProd --> RdsBaz3[RDS Stack: baz-app]
+    AbcProd --> EcsFoo3[ECS Service: foo-app (Fargate)]
+    AbcProd --> EcsBaz3[ECS Service: baz-app (Fargate)]
+
+    Alb3 --> TF5[TargetGroup: foo:8080]
+    Alb3 --> TG6[TargetGroup: baz:8080]
+    TF5 --> EcsFoo3
+    TG6 --> EcsBaz3
+    RdsFoo3 --> EcsFoo3
+    RdsBaz3 --> EcsBaz3
+  end
+
+  %% SSM-resolved IDs flow into each root stack through root parameters
+  VPC --> BaseStaging
+  Pub1 --> BaseStaging
+  Pub2 --> BaseStaging
+  Priv1 --> BaseStaging
+  Priv2 --> BaseStaging
+
+  VPC --> BaseProd
+  Pub1 --> BaseProd
+  Pub2 --> BaseProd
+  Priv1 --> BaseProd
+  Priv2 --> BaseProd
+
+  VPC --> AbcProd
+  Pub1 --> AbcProd
+  Pub2 --> AbcProd
+  Priv1 --> AbcProd
+  Priv2 --> AbcProd
+```

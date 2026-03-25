@@ -44,7 +44,7 @@ tenants:
       production:
         accountId: '091457645177'
         accountName: 'goldenowl'
-        networkVpcName: 'Sanbox-VPC'
+        networkVpcName: 'ABC'
         networkPublicSubnetNames: ['PrivateAppA', 'PrivateAppB']
         networkPrivateSubnetNames: ['PublicInboundA', 'PublicInboundB']
 
