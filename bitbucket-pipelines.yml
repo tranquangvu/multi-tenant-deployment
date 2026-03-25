@@ -77,14 +77,16 @@ pipelines:
             - echo "Approved, continue to production"
 
   custom:
-    # Deploy root stack for one (tenant, environment). Base: staging or production; others: production only.
+    # Deploy root stack for one tenant.
+    # - If DEPLOY_ENVIRONMENT is provided: deploy that environment for the tenant.
+    # - If DEPLOY_ENVIRONMENT is empty/omitted: deploy all environments for the tenant from tenant-registry.yaml.
     # Set AWS_ROLE_ARN in repo vars or use a deployment env that matches the tenant/env.
     deploy-tenant:
       - variables:
           - name: DEPLOY_TENANT_ID
             default: base
           - name: DEPLOY_ENVIRONMENT
-            default: staging
+            default: ""
       - step:
           name: Deploy tenant
           oidc: true
@@ -108,34 +110,12 @@ pipelines:
             - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh $DEPLOY_TENANT_ID)"
             - export AWS_REGION="$AWS_DEFAULT_REGION"
             - ./scripts/deploy-shared.sh
-            - ./scripts/deploy-tenant.sh "$DEPLOY_TENANT_ID" "$DEPLOY_ENVIRONMENT"
-
-    # Update ECS task definition with new image tag and deploy (triggered by app repo or run manually).
-    # Variables: IMAGE_TAG (required), TARGET_TENANTS (required), DEPLOY_ENV (required), APP_ID (required).
-    deploy-ecs-svc:
-      - variables:
-          - name: IMAGE_TAG
-            default: ""
-          - name: TARGET_TENANTS
-            default: ""
-          - name: DEPLOY_ENV
-            default: ""
-          - name: APP_ID
-            default: ""
-      - step:
-          name: Update ECS image and deploy
-          oidc: true
-          script:
-            - chmod +x ./scripts/*.sh
-            - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
-            - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
             - |
-              [[ -n "${IMAGE_TAG:-}" ]] || { echo "IMAGE_TAG is required"; exit 1; }
-              [[ -n "${TARGET_TENANTS:-}" ]] || { echo "TARGET_TENANTS is required"; exit 1; }
-              [[ -n "${DEPLOY_ENV:-}" ]] || { echo "DEPLOY_ENV is required"; exit 1; }
-              [[ -n "${APP_ID:-}" ]] || { echo "APP_ID is required"; exit 1; }
-              export IMAGE_TAG TARGET_TENANTS DEPLOY_ENV APP_ID
-              ./scripts/deploy-ecs-svc.sh
+              if [[ -n "${DEPLOY_ENVIRONMENT:-}" ]]; then
+                ./scripts/deploy-tenant.sh "$DEPLOY_TENANT_ID" "$DEPLOY_ENVIRONMENT"
+              else
+                ./scripts/deploy-tenant.sh "$DEPLOY_TENANT_ID"
+              fi
 
     # Promote to multiple tenants (production only for abc/xyz)
     # Set AWS_ROLE_ARN (e.g. a role that can assume per-tenant roles, or one role per tenant via deployment).
