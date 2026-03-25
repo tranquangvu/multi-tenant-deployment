@@ -1,6 +1,11 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Root stack - registers all module stacks via TemplateURL (S3). One per (tenant, environment)."
-# Deploy: upload templates to S3 first, then deploy this stack with params.json
+# Deploy: upload templates to S3, then deploy with params merged for network paths.
+# The five *SsmPath parameters are usually omitted from params.json: ./scripts/deploy-tenant.sh
+# merges them from config/tenant-registry.yaml (scripts/tenant-network-ssm-params.rb). At deploy,
+# each value is the SSM parameter *name* (e.g. /accelerator/network/vpc/MyVpc/id). Parameter types
+# AWS::SSM::Parameter::Value<...> tell CloudFormation to resolve that name to the VPC/subnet ID
+# at deploy time—no {{resolve:ssm:...}} syntax is required in this template for those inputs.
 
 Parameters:
   TenantId:
@@ -23,19 +28,19 @@ Parameters:
     Description: S3 prefix (key prefix) for template files
   VpcIdSsmPath:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::VPC::Id>
-    Description: SSM parameter name for VPC ID (Landing Zone), e.g. /accelerator/network/vpc/MyVpc/id
+    Description: SSM parameter *path* (not the raw VPC id); CloudFormation resolves it at deploy (equivalent to dynamic ref, no {{resolve:ssm}} needed here).
   PublicSubnet1SsmPath:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Subnet::Id>
-    Description: SSM parameter name for first public subnet ID
+    Description: SSM path for first public subnet id; resolved at deploy.
   PublicSubnet2SsmPath:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Subnet::Id>
-    Description: SSM parameter name for second public subnet ID
+    Description: SSM path for second public subnet id; resolved at deploy.
   PrivateSubnet1SsmPath:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Subnet::Id>
-    Description: SSM parameter name for first private subnet ID
+    Description: SSM path for first private subnet id; resolved at deploy.
   PrivateSubnet2SsmPath:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Subnet::Id>
-    Description: SSM parameter name for second private subnet ID
+    Description: SSM path for second private subnet id; resolved at deploy.
   BitbucketOidcAudience:
     Type: String
     Default: pip

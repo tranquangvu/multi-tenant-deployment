@@ -53,15 +53,15 @@ This document covers **Flyway** for database migrations and **per-tenant rollbac
 
 ### 2.2 Database Rollback
 
-**Option A – Flyway Undo (Flyway Teams)**  
-- Maintain undo migrations (U2, U1, …). On rollback, run Flyway undo to previous version.  
+**Option A – Flyway Undo (Flyway Teams)**
+- Maintain undo migrations (U2, U1, …). On rollback, run Flyway undo to previous version.
 - Requires Flyway Teams and disciplined undo script authoring.
 
-**Option B – Snapshot / Point-in-Time Restore (Recommended)**  
-- **RDS**: Use automated backups and **point-in-time recovery** to restore to a time before the migration; then redeploy the previous app version.  
+**Option B – Snapshot / Point-in-Time Restore (Recommended)**
+- **RDS**: Use automated backups and **point-in-time recovery** to restore to a time before the migration; then redeploy the previous app version.
 - **Snapshot before migration**: Before running Flyway in pipeline, create a DB snapshot (RDS snapshot or export). If migration fails or rollback is needed, restore from snapshot and fix.
 
-**Option C – Forward-only fix**  
+**Option C – Forward-only fix**
 - Do not undo migration; add a new migration (V4) that reverts schema/data changes. Prefer when undo is complex or not available.
 
 ### 2.3 Rollback Pipeline / Scripts
