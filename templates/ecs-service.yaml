@@ -61,6 +61,11 @@ Parameters:
     Type: AWS::EC2::Subnet::Id
   AppSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
+  AssignPublicIp:
+    Type: String
+    Default: DISABLED
+    AllowedValues: [ENABLED, DISABLED]
+    Description: Whether the Fargate tasks should get a public IP.
 
 Conditions:
   HasTargetGroup: !Not [!Equals [!Ref TargetGroupArn, ""]]
@@ -190,7 +195,7 @@ Resources:
           Rollback: true
       NetworkConfiguration:
         AwsvpcConfiguration:
-          AssignPublicIp: DISABLED
+          AssignPublicIp: !Ref AssignPublicIp
           Subnets:
             - !Ref PrivateSubnet1Id
             - !Ref PrivateSubnet2Id

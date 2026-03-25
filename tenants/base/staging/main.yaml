@@ -145,6 +145,8 @@ Resources:
         DbPort: !GetAtt RdsFooAppStack.Outputs.DbPort
         DbName: !GetAtt RdsFooAppStack.Outputs.DbName
         AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
+        # Testing with public subnet only
+        AssignPublicIp: ENABLED
         AppId: foo
 
   EcsBazAppStack:
@@ -167,6 +169,8 @@ Resources:
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazArn
         DesiredCount: !Ref BazAppDesiredCount
         AppSecretArn: !GetAtt SecretsBazAppStack.Outputs.AppSecretArn
+        # Testing with public subnet only
+        AssignPublicIp: ENABLED
         AppId: baz
 
 Outputs:
