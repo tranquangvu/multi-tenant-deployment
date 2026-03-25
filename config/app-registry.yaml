@@ -1,8 +1,0 @@
-# Applications registry — 2 apps per tenant
-# Each app has isolated DB, config, and secrets per (tenant, environment)
-
-applications:
-  - id: foo
-    name: FooApp
-  - id: baz
-    name: BazApp

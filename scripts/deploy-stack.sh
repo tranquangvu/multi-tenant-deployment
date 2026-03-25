@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deploy a single CloudFormation stack.
 # Usage: ./deploy-stack.sh <stack-name> <template-file-or-path> [params-file]
-#   Template: filename (e.g. network.yaml) for templates/, or path (e.g. tenants/base/staging/main.yaml) for root stack.
+#   Template: filename (e.g. alb.yaml) for templates/, or path (e.g. tenants/base/staging/main.yaml) for root stack.
 #   Params: ${INFRA_S3_BUCKET:-mt-infra}, ${TEMPLATE_S3_PREFIX:-templates} expanded like bash.
 set -euo pipefail
 
@@ -33,7 +33,9 @@ fi
 EXTRA_ARGS=()
 if [[ -n "$PARAMS_FILE" ]]; then
   # Resolve params path (relative to project root if path contains /)
-  if [[ "$PARAMS_FILE" == */* ]]; then
+  if [[ "$PARAMS_FILE" == /* ]]; then
+    PARAMS_PATH="$PARAMS_FILE"
+  elif [[ "$PARAMS_FILE" == */* ]]; then
     PARAMS_PATH="$INFRA_DIR/$PARAMS_FILE"
   else
     PARAMS_PATH="$PARAMS_FILE"

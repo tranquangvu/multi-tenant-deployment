@@ -13,6 +13,9 @@ Parameters:
     Type: String
     Default: mt
     Description: Prefix for stack and resource names
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID (from Landing Zone SSM, passed from root stack)
   BitbucketOidcAudience:
     Type: String
     Default: pip
@@ -29,8 +32,7 @@ Resources:
     Properties:
       Name: !Sub "/${StackPrefix}/${TenantId}/${Environment}/network/VpcId"
       Type: String
-      Value: !ImportValue
-        Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-VpcId"
+      Value: !Ref VpcId
       Description: VPC ID for this tenant environment
 
   AppSecurityGroup:
@@ -38,8 +40,7 @@ Resources:
     Properties:
       GroupName: !Sub "${StackPrefix}-${TenantId}-${Environment}-app-sg"
       GroupDescription: Security group for app compute (ECS/ALB)
-      VpcId: !ImportValue
-        Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-VpcId"
+      VpcId: !Ref VpcId
       Tags:
         - Key: Name
           Value: !Sub "${StackPrefix}-${TenantId}-${Environment}-app-sg"
@@ -65,8 +66,7 @@ Resources:
     Properties:
       GroupName: !Sub "${StackPrefix}-${TenantId}-${Environment}-db-sg"
       GroupDescription: Security group for RDS
-      VpcId: !ImportValue
-        Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-VpcId"
+      VpcId: !Ref VpcId
       Tags:
         - Key: Name
           Value: !Sub "${StackPrefix}-${TenantId}-${Environment}-db-sg"
@@ -143,7 +143,10 @@ Resources:
             Action:
               - ssm:GetParameter
               - ssm:GetParameters
-            Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${StackPrefix}/${TenantId}/${Environment}/*"
+            Resource:
+              - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${StackPrefix}/${TenantId}/${Environment}/*"
+              - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/accelerator/*"
+              - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/network/*"
 
 Outputs:
   AppSecurityGroupId:

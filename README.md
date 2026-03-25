@@ -7,18 +7,20 @@
 - **`config/`** — Tenant and app registry (YAML)
   - `tenant-registry.yaml` — Tenants (base, abc, xyz), region, and per-environment metadata. Currently used by `deploy-tenant.sh` and `get-tenant-region.sh` / `get-tenant-envs.sh` for tenant/environment resolution.
   - `app-registry.yaml` — Applications (foo, baz).
-- **`templates/`** — CloudFormation module templates (network, security, secrets, rds, alb, ecs-cluster, ecs-service, ecr). Uploaded to S3 for root stack deployment via **`./scripts/upload-templates.sh`**.
+- **`templates/`** — CloudFormation module templates (security, secrets, rds, alb, ecs-cluster, ecs-service, ecr). Uploaded to S3 for root stack deployment via **`./scripts/upload-config-templates.sh`**.
 - **`shared/`** — Shared resources: ECR repositories per app via **`shared/main.yaml`** (nested stacks from S3). Deploy with **`./scripts/deploy-shared.sh`** once per account/region; tenant stacks import ECR URI via CloudFormation export.
 - **`tenants/<tenant-id>/<staging|production>/`** — Per-tenant, per-environment:
   - **`main.yaml`** — Root stack that references module templates via **TemplateURL** (S3). Deploys nested stacks for each module.
   - **`params.json`** — Parameters for the root stack (TenantId, Environment, StackPrefix, TemplateS3Bucket, TemplateS3Prefix, app desired counts, etc.).
 - **`scripts/`** — Deployment and helpers:
   - `deploy-shared.sh` — Deploy shared stack (ECR per app); run once per account/region.
-  - `upload-templates.sh` — Upload `templates/*.yaml` to S3.
+  - `upload-config-templates.sh` — Upload `templates/*.yaml` (and `config/*.yaml`) to S3.
   - `deploy-stack.sh` — Deploy a single CloudFormation stack (used by other scripts).
-  - `deploy-tenant.sh` — Deploy root stack for one tenant (and optional environment); sets region from registry.
+  - `deploy-tenant.sh` — Deploy root stack for one tenant (and optional environment); sets region from registry, merges VPC/subnet SSM parameter names from the registry, and optionally checks AWS account vs `accountId`.
   - `get-tenant-envs.sh` — List environments for a tenant from registry.
   - `get-tenant-region.sh` — Output region for a tenant from registry.
+  - `get-tenant-account-id.sh` — Output `accountId` for a (tenant, environment).
+  - `tenant-network-ssm-params.rb` — Emit JSON array of CloudFormation parameters for SSM paths (used by `deploy-tenant.sh`).
 - **`docs/`** — Design and runbooks (see [docs/README.md](docs/README.md)).
 
 ## Tenant layout
@@ -29,7 +31,6 @@ multi-tenant-deployment/
 │   ├── tenant-registry.yaml
 │   └── app-registry.yaml
 ├── templates/
-│   ├── network.yaml
 │   ├── security.yaml
 │   ├── secrets.yaml
 │   ├── rds.yaml
@@ -58,11 +59,13 @@ multi-tenant-deployment/
 │           └── params.json
 └── scripts/
     ├── deploy-shared.sh
-    ├── upload-templates.sh
+    ├── upload-config-templates.sh
     ├── deploy-stack.sh
     ├── deploy-tenant.sh
     ├── get-tenant-envs.sh
-    └── get-tenant-region.sh
+    ├── get-tenant-region.sh
+    ├── get-tenant-account-id.sh
+    └── tenant-network-ssm-params.rb
 ```
 
 ## Tenant registry schema
@@ -76,10 +79,18 @@ multi-tenant-deployment/
 - `tenants.<tenant>.environments.<env>.networkPublicSubnetNames` — public subnet names.
 - `tenants.<tenant>.environments.<env>.networkPrivateSubnetNames` — private subnet names.
 
-Current behavior:
+**SSM path convention** (Landing Zone / shared network; resolved at CloudFormation deploy time):
 
-- Deployment scripts read tenant + environment availability and region from this registry.
-- Account and network name fields are tracked metadata and are intended for expanding automation (for example, account/role routing and environment-specific network resolution).
+- Default root: `/accelerator/network` (override with env `SSM_NETWORK_PREFIX` or optional tenant key `ssmNetworkPrefix`).
+- VPC id: `{prefix}/vpc/{networkVpcName}/id`
+- Subnet id: `{prefix}/vpc/{networkVpcName}/subnet/{subnetName}/id`
+
+The root stack uses `AWS::SSM::Parameter::Value<AWS::EC2::VPC::Id>` (and subnet types) for those parameters and passes resolved IDs into nested modules. The IAM principal that runs `aws cloudformation deploy` must allow `ssm:GetParameter` on those ARNs.
+
+**Script behavior:**
+
+- `deploy-tenant.sh` reads `accountId`, subnet names, and VPC name; merges five parameters (`VpcIdSsmPath`, `PublicSubnet1SsmPath`, …) into `params.json` before calling `deploy-stack.sh`. It compares `sts get-caller-identity` to `accountId` unless `SKIP_TENANT_ACCOUNT_CHECK=1`.
+- Requires **Ruby** (YAML parsing) and **jq** (merge). Bitbucket steps install Ruby on the image when missing.
 
 ## Deploy (root stack via S3)
 
@@ -89,7 +100,7 @@ All root stacks (shared and per-tenant) pull module templates from S3. Upload te
 
    ```bash
    export INFRA_S3_BUCKET=your-s3-bucket   # optional; default mt-infra
-   ./scripts/upload-templates.sh
+   ./scripts/upload-config-templates.sh
    ```
 
 2. **Deploy shared stacks** (ECR per app) once per account/region:
@@ -99,9 +110,9 @@ All root stacks (shared and per-tenant) pull module templates from S3. Upload te
    ./scripts/deploy-shared.sh
    ```
 
-3. **Deploy root stack** for one (tenant, environment). Either use the helper (sets region from registry) or call `deploy-stack.sh` directly:
+3. **Deploy root stack** for one (tenant, environment). Use **`deploy-tenant.sh`** so VPC and subnet SSM paths are merged from the registry. Calling **`deploy-stack.sh`** with only `params.json` will **omit** those parameters and the deploy will fail.
 
-   **Option A — Helper (recommended):** sets `AWS_DEFAULT_REGION` from `config/tenant-registry.yaml`:
+   **Recommended — `deploy-tenant.sh`:** sets region from the registry, merges network SSM parameters, optional account check:
 
    ```bash
    ./scripts/deploy-tenant.sh base staging
@@ -112,27 +123,28 @@ All root stacks (shared and per-tenant) pull module templates from S3. Upload te
    ./scripts/deploy-tenant.sh base
    ```
 
-   **Option B — Manual stack name and paths:** set region first, then:
+   **Manual `deploy-stack.sh`:** build a merged params file first, then deploy (same merge `deploy-tenant.sh` uses):
 
    ```bash
    export INFRA_S3_BUCKET=your-s3-bucket
    export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
-   ./scripts/deploy-stack.sh mt-base-staging tenants/base/staging/main.yaml tenants/base/staging/params.json
-   ./scripts/deploy-stack.sh mt-base-production tenants/base/production/main.yaml tenants/base/production/params.json
-   ./scripts/deploy-stack.sh mt-abc-production tenants/abc/production/main.yaml tenants/abc/production/params.json
-   ./scripts/deploy-stack.sh mt-xyz-production tenants/xyz/production/main.yaml tenants/xyz/production/params.json
+   NET="$(ruby ./scripts/tenant-network-ssm-params.rb ./config/tenant-registry.yaml base staging)"
+   jq --argjson net "$NET" '. + $net' tenants/base/staging/params.json > /tmp/merged-params.json
+   ./scripts/deploy-stack.sh mt-base-staging tenants/base/staging/main.yaml /tmp/merged-params.json
    ```
 
-   **deploy-stack.sh** accepts a template path (e.g. `tenants/base/staging/main.yaml`) or a template filename (e.g. `network.yaml` for `templates/`). Params can use `${INFRA_S3_BUCKET:-mt-infra}` and `${TEMPLATE_S3_PREFIX:-templates}`; **deploy-stack.sh** resolves them. Root stacks (main.yaml) get `CAPABILITY_AUTO_EXPAND`; stacks in `ROLLBACK_COMPLETE` are deleted before deploy.
+   **deploy-stack.sh** accepts a template path (e.g. `tenants/base/staging/main.yaml`) or a template filename (e.g. `alb.yaml` under `templates/`). Params can use `${INFRA_S3_BUCKET:-mt-infra}` and `${TEMPLATE_S3_PREFIX:-templates}`; **deploy-stack.sh** resolves them. Root stacks (main.yaml) get `CAPABILITY_AUTO_EXPAND`; stacks in `ROLLBACK_COMPLETE` are deleted before deploy.
+
+   **Migration:** Older stacks may still have a nested `NetworkStack` resource. Updating to this layout removes that nested stack; CloudFormation deletes it on successful update. If the update fails, you may need a one-time stack recreation.
 
 ## Bitbucket pipeline
 
 - **Repository variables:** `INFRA_S3_BUCKET` (default `mt-infra`), `TEMPLATE_S3_PREFIX` (default `templates`), `AWS_ROLE_ARN` for OIDC.
 - **main branch:** Upload templates → Deploy shared → Deploy base staging (root stack). Base production is available as a manual step (commented out by default).
 - **Custom `deploy-tenant`:** Variables `DEPLOY_TENANT_ID` (default `base`), `DEPLOY_ENVIRONMENT` (default `staging`). Uploads templates, deploys shared, then deploys root stack for the chosen tenant/environment.
-- **Custom `promote-tenants`:** Variable `PROMOTE_TENANTS` (e.g. `abc`, `abc,xyz`, or `all`). Manual trigger. Uploads templates, then for each tenant deploys shared and root stack for production.
+- **Custom `promote-tenants`:** Variable `TARGET_TENANTS` (e.g. `abc`, `abc,xyz`, or `all`). Manual trigger. Uploads templates, then for each tenant deploys shared and `deploy-tenant.sh <tenant> production`.
 
-Pipeline uses OIDC (`oidc: true`); set `AWS_ROLE_ARN` in repo or deployment environment.
+Pipeline uses OIDC (`oidc: true`); set `AWS_ROLE_ARN` in repo or deployment environment. Steps that run `deploy-tenant.sh` install **Ruby** and **jq** on the image when missing (needed to merge SSM path parameters from the registry).
 
 ## Stack naming
 

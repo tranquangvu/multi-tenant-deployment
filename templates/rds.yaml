@@ -37,6 +37,12 @@ Parameters:
     Type: String
     Default: "15"
     Description: PostgreSQL engine version. Override if not available in your region.
+  PrivateSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: Private subnet for DB subnet group (from Landing Zone SSM)
+  PrivateSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: Private subnet for DB subnet group (from Landing Zone SSM)
 
 Resources:
   DbSubnetGroup:
@@ -44,10 +50,8 @@ Resources:
     Properties:
       DBSubnetGroupDescription: !Sub "Subnet group for ${AppId} in ${TenantId}-${Environment}"
       SubnetIds:
-        - !ImportValue
-          Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-PrivateSubnet1Id"
-        - !ImportValue
-          Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-PrivateSubnet2Id"
+        - !Ref PrivateSubnet1Id
+        - !Ref PrivateSubnet2Id
       Tags:
         - Key: TenantId
           Value: !Ref TenantId

@@ -7,9 +7,9 @@ Short operational procedures for the multi-tenant deployment framework. Assumes 
 | Script | Purpose |
 |--------|---------|
 | `deploy-stack.sh` | Deploy a single CloudFormation stack. Usage: `./scripts/deploy-stack.sh <stack-name> <template-file> [params-file]`. Used by other scripts. Root stacks (main.yaml) get `CAPABILITY_AUTO_EXPAND`. Handles `ROLLBACK_COMPLETE` by deleting stack before deploy. |
-| `deploy-tenant.sh` | Deploy root stack (main.yaml) for a tenant and optional environment. Usage: `./scripts/deploy-tenant.sh <tenant-id> [environment]`. Omit environment to deploy all envs for that tenant. Examples: `./scripts/deploy-tenant.sh base`, `./scripts/deploy-tenant.sh base staging`, `./scripts/deploy-tenant.sh abc production`. Uses `config/tenant-registry.yaml`; only base supports staging. |
+| `deploy-tenant.sh` | Deploy root stack (main.yaml) for a tenant and optional environment. Usage: `./scripts/deploy-tenant.sh <tenant-id> [environment]`. Omit environment to deploy all envs for that tenant. Examples: `./scripts/deploy-tenant.sh base`, `./scripts/deploy-tenant.sh base staging`, `./scripts/deploy-tenant.sh abc production`. Reads `config/tenant-registry.yaml` for region, optional `accountId` check, and merges VPC/subnet SSM path parameters via `tenant-network-ssm-params.rb`; only base supports staging. |
 | `deploy-shared.sh` | Deploy shared stacks (e.g. ECR repos via `shared/main.yaml`). Run once per account/region before deploying tenants. Usage: `AWS_DEFAULT_REGION=ap-southeast-1 ./scripts/deploy-shared.sh` or `./scripts/deploy-shared.sh [params-file]`. |
-| `upload-templates.sh` | Upload CloudFormation templates from `templates/` to S3. Optional env: `INFRA_S3_BUCKET`, `TEMPLATE_S3_PREFIX`. Default bucket: `mt-infra`. |
+| `upload-config-templates.sh` | Upload CloudFormation templates from `templates/` and config from `config/` to S3. Optional env: `INFRA_S3_BUCKET`, `TEMPLATE_S3_PREFIX`, `CONFIG_S3_PREFIX`. Default bucket: `mt-infra`. |
 | `get-tenant-envs.sh` | List environments for a tenant from `config/tenant-registry.yaml`. Usage: `./scripts/get-tenant-envs.sh <tenant-id>`. |
 | `get-tenant-region.sh` | Output AWS region for a tenant from registry. Usage: `./scripts/get-tenant-region.sh <tenant-id>`. |
 
@@ -22,7 +22,7 @@ Short operational procedures for the multi-tenant deployment framework. Assumes 
 **Steps**:
 1. Push/merge to `main` in the application (or infra) repo.
 2. Bitbucket Pipeline runs automatically: Build → Deploy to Base → Validate.
-3. **Infrastructure (manual or pipeline)**: From this repo, ensure templates are in S3 if using nested stacks: `./scripts/upload-templates.sh`. Then deploy base: `./scripts/deploy-tenant.sh base staging` or `./scripts/deploy-tenant.sh base` to deploy all base environments (staging, production).
+3. **Infrastructure (manual or pipeline)**: From this repo, ensure templates are in S3 if using nested stacks: `./scripts/upload-config-templates.sh`. Then deploy base: `./scripts/deploy-tenant.sh base staging` or `./scripts/deploy-tenant.sh base` to deploy all base environments (staging, production).
 4. Check pipeline result:
    - **Success**: Base tenant is updated; proceed to “Promote to Tenants” when ready.
    - **Failure**: Fix code/config, push again; check Jira for linked ticket status if integrated.

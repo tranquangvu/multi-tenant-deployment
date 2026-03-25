@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# Output environments for a tenant from config/tenant-registry.yaml (environments: [staging, production] or [production]).
+# Output environments for a tenant from config/tenant-registry.yaml.
 # Usage: ./scripts/get-tenant-envs.sh <tenant-id>
-# Output: space-separated list of environment names (e.g. "staging production" or "production").
-# Exit: 0 if found, 1 if tenant missing or registry/envs not found.
+# Output: space-separated environment names (e.g. "staging production").
 set -euo pipefail
 
 TENANT_ID="${1:-}"
@@ -20,18 +19,15 @@ if [[ ! -f "$TENANT_REGISTRY" ]]; then
   exit 1
 fi
 
-ENVS="$(awk -v tenant="$TENANT_ID" '
-  $1 == tenant ":" { in_tenant=1; next }
-  in_tenant && /^[[:space:]]*environments:/ {
-    sub(/.*\[/, ""); sub(/\].*/, ""); gsub(/,/, " "); print
-    in_tenant=0
-  }
-  in_tenant && /^[^[:space:]]/ { in_tenant=0 }
-' "$TENANT_REGISTRY" | xargs)"
-
-if [[ -z "$ENVS" ]]; then
-  echo "No environments found for tenant '$TENANT_ID' in $TENANT_REGISTRY" >&2
+if ! command -v ruby >/dev/null 2>&1; then
+  echo "ruby is required to parse $TENANT_REGISTRY" >&2
   exit 1
 fi
 
-echo "$ENVS"
+ruby -ryaml -e '
+  r = YAML.load_file(ARGV[0])
+  t = r["tenants"][ARGV[1]] or abort("unknown tenant")
+  envs = t["environments"] or abort("no environments")
+  abort("environments must be a map") unless envs.is_a?(Hash)
+  puts envs.keys.join(" ")
+' "$TENANT_REGISTRY" "$TENANT_ID"

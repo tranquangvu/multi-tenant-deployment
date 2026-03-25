@@ -44,44 +44,77 @@ Tenant metadata is stored in a **central configuration repository** (Bitbucket),
 
 ```yaml
 # config/tenant-registry.yaml
-# Landing zone: one AWS account per tenant (and optionally per environment).
+# Landing zone: typically one AWS account per tenant (and optionally per environment).
 # Base has staging + production; other tenants have production only.
+# Scripts (e.g. deploy-tenant.sh) read region, accountId, and network names to merge SSM paths.
 
 tenants:
   base:
+    id: base
     name: Base
     region: ap-southeast-1
-    environments: [staging, production]
-    accounts:
-      staging: "111111111111"
-      production: "222222222222"
+    # Optional: ssmNetworkPrefix — root for SSM paths (default /accelerator/network; overridable via SSM_NETWORK_PREFIX).
+    environments:
+      staging:
+        accountId: "111111111111"
+        accountName: org-base-staging
+        networkVpcName: base-staging-vpc
+        networkPublicSubnetNames: [public-subnet-a, public-subnet-b]
+        networkPrivateSubnetNames: [private-subnet-a, private-subnet-b]
+      production:
+        accountId: "222222222222"
+        accountName: org-base-production
+        networkVpcName: base-production-vpc
+        networkPublicSubnetNames: [public-subnet-a, public-subnet-b]
+        networkPrivateSubnetNames: [private-subnet-a, private-subnet-b]
 
   abc:
+    id: abc
     name: ABC
     region: ap-southeast-1
-    environments: [production]
-    accounts:
-      production: "333333333333"
+    environments:
+      production:
+        accountId: "333333333333"
+        accountName: org-tenant-abc
+        networkVpcName: abc-vpc
+        networkPublicSubnetNames: [public-subnet-a, public-subnet-b]
+        networkPrivateSubnetNames: [private-subnet-a, private-subnet-b]
 
   xyz:
+    id: xyz
     name: XYZ
     region: ap-southeast-1
-    environments: [production]
-    accounts:
-      production: "444444444444"
+    environments:
+      production:
+        accountId: "444444444444"
+        accountName: org-tenant-xyz
+        networkVpcName: xyz-vpc
+        networkPublicSubnetNames: [public-subnet-a, public-subnet-b]
+        networkPrivateSubnetNames: [private-subnet-a, private-subnet-b]
 ```
 
 ### 2.2 Field Definitions
 
-The current registry (`config/tenant-registry.yaml`) uses **name**, **region**, and **environments** per tenant. The tenant key (e.g. `base`, `abc`) is the tenant identifier in pipelines and CloudFormation.
+The registry (`config/tenant-registry.yaml`) is keyed by **tenant id** (`base`, `abc`, `xyz`, …). That key matches `TenantId` in CloudFormation and pipeline variables. Each tenant includes **`id`** (same as the key), **`name`**, **`region`**, and a map **`environments`**.
 
-| Field            | Type    | Description                                                                 |
-| ---------------- | ------- | --------------------------------------------------------------------------- |
-| *(key)*          | string  | Tenant identifier (e.g. `base`, `abc`, `xyz`)                               |
-| `name`           | string  | Human-readable name.                                                        |
-| `region`         | string  | Primary AWS region for this tenant.                                         |
-| `environments`   | array   | Environments for this tenant: `[staging, production]`                       |
-| `accounts`       | object  | *(Landing zone multi-account)* Map of environment → AWS account ID (e.g. `production: "333333333333"`). Pipeline uses this to assume role and deploy to the correct account. |
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| *(YAML key)* | string | Tenant identifier (`base`, `abc`, `xyz`). |
+| `id` | string | Same as the tenant key; explicit id for scripts. |
+| `name` | string | Human-readable name. |
+| `region` | string | Primary AWS region for this tenant. |
+| `ssmNetworkPrefix` | string | *(Optional.)* Root for Landing Zone SSM paths (e.g. `/accelerator/network`). If omitted, use env `SSM_NETWORK_PREFIX` or the default `/accelerator/network`. |
+| `environments` | map | Keys: `staging` and/or `production`. **Base** has both; **abc** / **xyz** have **production** only. Values use the per-environment fields below. |
+
+Per-environment fields (under `tenants.<tenant>.environments.<staging|production>`):
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `accountId` | string | AWS account ID for this (tenant, environment). `deploy-tenant.sh` compares this to `sts get-caller-identity` unless `SKIP_TENANT_ACCOUNT_CHECK=1`. |
+| `accountName` | string | Display / documentation name for the account. |
+| `networkVpcName` | string | VPC name segment used in SSM: `{prefix}/vpc/{networkVpcName}/id`. |
+| `networkPublicSubnetNames` | array (2) | Two public subnet **names** for SSM subnet id paths (ALB). |
+| `networkPrivateSubnetNames` | array (2) | Two private subnet **names** for SSM paths (RDS, ECS tasks). |
 
 Optional extensions (for promotion and versioning):
 
@@ -116,9 +149,8 @@ applications:
 
 ### 4.2 CloudFormation Stacks
 
-- **Base tenant**: `{stack-prefix}-base-{layer}` e.g. `mt-base-network`, `mt-base-foo` (or per-app stack).
-- **Per tenant**: `{stack-prefix}-{tenant-id}-{layer}` e.g. `mt-abc-network`, `mt-abc-foo`.
-- **Shared (if any)**: `{stack-prefix}-shared-{purpose}`.
+- **Root stack per (tenant, environment)**: `{stack-prefix}-{tenant-id}-{staging|production}` e.g. `mt-base-staging`, `mt-abc-production`. Nested stacks (security, RDS, ALB, ECS, …) are created inside that root.
+- **Shared (ECR, etc.)**: `{stack-prefix}-shared` e.g. `mt-shared`.
 
 ### 4.3 Bitbucket Repositories
 

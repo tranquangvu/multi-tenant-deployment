@@ -21,9 +21,21 @@ Parameters:
     Type: String
     Default: templates
     Description: S3 prefix (key prefix) for template files
-  VpcCidr:
-    Type: String
-    Default: 10.0.0.0/16
+  VpcIdSsmPath:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::VPC::Id>
+    Description: SSM parameter name for VPC ID (Landing Zone), e.g. /accelerator/network/vpc/MyVpc/id
+  PublicSubnet1SsmPath:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Subnet::Id>
+    Description: SSM parameter name for first public subnet ID
+  PublicSubnet2SsmPath:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Subnet::Id>
+    Description: SSM parameter name for second public subnet ID
+  PrivateSubnet1SsmPath:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Subnet::Id>
+    Description: SSM parameter name for first private subnet ID
+  PrivateSubnet2SsmPath:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Subnet::Id>
+    Description: SSM parameter name for second private subnet ID
   BitbucketOidcAudience:
     Type: String
     Default: pip
@@ -45,25 +57,15 @@ Parameters:
     Description: Desired number of tasks for Baz App (set to 0 for initial deploy)
 
 Resources:
-  NetworkStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/network.yaml"
-      Parameters:
-        TenantId: !Ref TenantId
-        Environment: !Ref Environment
-        StackPrefix: !Ref StackPrefix
-        VpcCidr: !Ref VpcCidr
-
   SecurityStack:
     Type: AWS::CloudFormation::Stack
-    DependsOn: NetworkStack
     Properties:
       TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/security.yaml"
       Parameters:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
+        VpcId: !Ref VpcIdSsmPath
         BitbucketOidcAudience: !Ref BitbucketOidcAudience
         BitbucketWorkspace: !Ref BitbucketWorkspace
         BitbucketRepo: !Ref BitbucketRepo
@@ -102,10 +104,7 @@ Resources:
 
   RdsFooAppStack:
     Type: AWS::CloudFormation::Stack
-    DependsOn:
-      - NetworkStack
-      - SecurityStack
-      - SecretsFooAppStack
+    DependsOn: SecretsFooAppStack
     Properties:
       TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/rds.yaml"
       Parameters:
@@ -114,6 +113,8 @@ Resources:
         StackPrefix: !Ref StackPrefix
         AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
         AppId: foo
+        PrivateSubnet1Id: !Ref PrivateSubnet1SsmPath
+        PrivateSubnet2Id: !Ref PrivateSubnet2SsmPath
 
   AlbStack:
     Type: AWS::CloudFormation::Stack
@@ -124,6 +125,9 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
+        VpcId: !Ref VpcIdSsmPath
+        PublicSubnet1Id: !Ref PublicSubnet1SsmPath
+        PublicSubnet2Id: !Ref PublicSubnet2SsmPath
 
   EcsFooAppStack:
     Type: AWS::CloudFormation::Stack
@@ -136,6 +140,10 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
+        ClusterName: !GetAtt EcsClusterStack.Outputs.ClusterName
+        PrivateSubnet1Id: !Ref PrivateSubnet1SsmPath
+        PrivateSubnet2Id: !Ref PrivateSubnet2SsmPath
+        AppSecurityGroupId: !GetAtt SecurityStack.Outputs.AppSecurityGroupId
         ImageUri: !ImportValue
           Fn::Sub: "${StackPrefix}-foo-EcrRepoUri"
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupFooArn
@@ -157,6 +165,10 @@ Resources:
         TenantId: !Ref TenantId
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
+        ClusterName: !GetAtt EcsClusterStack.Outputs.ClusterName
+        PrivateSubnet1Id: !Ref PrivateSubnet1SsmPath
+        PrivateSubnet2Id: !Ref PrivateSubnet2SsmPath
+        AppSecurityGroupId: !GetAtt SecurityStack.Outputs.AppSecurityGroupId
         ImageUri: !ImportValue
           Fn::Sub: "${StackPrefix}-baz-EcrRepoUri"
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupBazArn
@@ -165,8 +177,6 @@ Resources:
         AppId: baz
 
 Outputs:
-  NetworkStackId:
-    Value: !Ref NetworkStack
   AlbDnsName:
     Value: !GetAtt AlbStack.Outputs.AlbDnsName
     Description: ALB DNS name for this tenant/environment

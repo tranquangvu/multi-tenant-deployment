@@ -86,6 +86,27 @@ export AWS_DEFAULT_REGION="$REGION"
 export AWS_REGION="$REGION"
 echo "Deploying tenant=$TENANT_ID env=$ENV_NAME to region: $REGION"
 
+if ! command -v ruby >/dev/null 2>&1; then
+  echo "ruby is required to merge network SSM paths from tenant-registry.yaml" >&2
+  exit 1
+fi
+if ! command -v jq >/dev/null 2>&1; then
+  echo "jq is required to merge CloudFormation parameters" >&2
+  exit 1
+fi
+
+GET_ACCOUNT_SCRIPT="$SCRIPT_DIR/get-tenant-account-id.sh"
+if [[ ! -x "$GET_ACCOUNT_SCRIPT" ]]; then
+  chmod +x "$GET_ACCOUNT_SCRIPT" 2>/dev/null || true
+fi
+EXPECTED_ACCOUNT="$("$GET_ACCOUNT_SCRIPT" "$TENANT_ID" "$ENV_NAME")"
+CURRENT_ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
+if [[ "${SKIP_TENANT_ACCOUNT_CHECK:-0}" != "1" && "$EXPECTED_ACCOUNT" != "$CURRENT_ACCOUNT" ]]; then
+  echo "tenant-registry accountId ($EXPECTED_ACCOUNT) != current AWS account ($CURRENT_ACCOUNT)." >&2
+  echo "Assume the target account role or set SKIP_TENANT_ACCOUNT_CHECK=1 to skip this check." >&2
+  exit 1
+fi
+
 # Map CLI env to directory and stack suffix
 ENV_DIR="staging"
 STACK_ENV_SUFFIX="staging"
@@ -116,7 +137,18 @@ if [[ ! -x "$DEPLOY_STACK" ]]; then
   exit 1
 fi
 
-echo "Running: $DEPLOY_STACK $STACK_NAME $TEMPLATE_REL $PARAMS_REL"
-"$DEPLOY_STACK" "$STACK_NAME" "$TEMPLATE_REL" "$PARAMS_REL"
+NETWORK_RUBY="$SCRIPT_DIR/tenant-network-ssm-params.rb"
+if [[ ! -f "$NETWORK_RUBY" ]]; then
+  echo "Missing $NETWORK_RUBY" >&2
+  exit 1
+fi
+
+NETWORK_JSON="$(ruby "$NETWORK_RUBY" "$TENANT_REGISTRY" "$TENANT_ID" "$ENV_NAME")"
+MERGED_PARAMS="$(mktemp)"
+trap 'rm -f "$MERGED_PARAMS"' EXIT
+jq --argjson net "$NETWORK_JSON" '. + $net' "$PARAMS_PATH" > "$MERGED_PARAMS"
+
+echo "Running: $DEPLOY_STACK $STACK_NAME $TEMPLATE_REL <merged-params>"
+"$DEPLOY_STACK" "$STACK_NAME" "$TEMPLATE_REL" "$MERGED_PARAMS"
 
 echo "Root stack deployed successfully for ${TENANT_ID}/${ENV_NAME} (${STACK_NAME})."

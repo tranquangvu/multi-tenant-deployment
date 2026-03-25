@@ -1,10 +1,21 @@
 # Tenant registry — base has staging + production; other tenants have production only.
-# Used for documentation today; later for pipelines to resolve target account and role per (tenant, env).
 #
-# When using AWS Landing Zone / multi-account:
-#   - accounts: one AWS account per (tenant, environment). Pipeline uses this to assume role and deploy.
-#   - deployment_role_arn: role to assume in target account (e.g. Landing Zone deployment role).
-#   - region: deployment region for this tenant (can override per-environment if needed).
+# Used by scripts/deploy-tenant.sh to:
+#   - resolve region and environment list
+#   - verify AWS account (accountId vs sts get-caller-identity), unless SKIP_TENANT_ACCOUNT_CHECK=1
+#   - build SSM parameter names for VPC and subnets (Landing Zone / shared network)
+#
+# SSM path pattern (default root: /accelerator/network):
+#   VPC id:     {ssmNetworkPrefix}/vpc/{networkVpcName}/id
+#   Subnet id:  {ssmNetworkPrefix}/vpc/{networkVpcName}/subnet/{subnetName}/id
+#
+# Override the root path with either:
+#   - env var SSM_NETWORK_PREFIX (e.g. /network for paths like /network/vpc/.../id), or
+#   - optional key ssmNetworkPrefix under the tenant (same string as SSM_NETWORK_PREFIX).
+#
+# CloudFormation resolves these at deploy time on the root stack
+# (AWS::SSM::Parameter::Value<...>). The IAM principal running aws cloudformation deploy
+# must have ssm:GetParameter on those parameter ARNs.
 
 tenants:
   base:
@@ -16,14 +27,14 @@ tenants:
         accountId: '862344888019'
         accountName: 'Sanbox'
         networkVpcName: 'Sanbox-VPC'
-        networkPublicSubnetNames: ['PrivateTestA', 'Sanbox-Subnet-2']
-        networkPrivateSubnetNames: ['PublicInboundA', 'PublicInboundB']
+        networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
+        networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
       production:
         accountId: '862344888019'
         accountName: 'Sanbox'
         networkVpcName: 'Sanbox-VPC'
-        networkPublicSubnetNames: ['PrivateTestA', 'Sanbox-Subnet-2']
-        networkPrivateSubnetNames: ['PublicInboundA', 'PublicInboundB']
+        networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
+        networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
 
   abc:
     id: abc
@@ -34,7 +45,7 @@ tenants:
         accountId: '862344888019'
         accountName: 'Sanbox'
         networkVpcName: 'Sanbox-VPC'
-        networkPublicSubnetNames: ['PrivateTestA', 'Sanbox-Subnet-2']
+        networkPublicSubnetNames: ['PrivateAppA', 'PrivateAppB']
         networkPrivateSubnetNames: ['PublicInboundA', 'PublicInboundB']
 
   xyz:
@@ -46,5 +57,5 @@ tenants:
         accountId: '862344888019'
         accountName: 'Sanbox'
         networkVpcName: 'Sanbox-VPC'
-        networkPublicSubnetNames: ['PrivateTestA', 'Sanbox-Subnet-2']
-        networkPrivateSubnetNames: ['PublicInboundA', 'PublicInboundB']
+        networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
+        networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']

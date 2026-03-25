@@ -52,7 +52,7 @@ Recommendation: Prefer **Option A (Landing Zone with multiple accounts)** for pr
 ### 3.1 Principles
 
 - **Reusable templates**: Same templates for base and every tenant; parameterize by `TenantId`, `AWS::AccountId`, region.
-- **Layered stacks**: Network → Security/Secrets → Data (RDS) → Compute (ECS/Lambda/App) so that dependencies are clear and rollback is manageable.
+- **Layered stacks**: Security/Secrets → Data (RDS) → Compute (ECS) with **VPC/subnets from LZ SSM** at the root (no dedicated network nested stack).
 - **No hardcoded tenant data**: Tenant-specific values come from parameters or SSM Parameter Store (populated from tenant registry or pipeline).
 
 ### 3.2 Suggested Stack Layout (Per Tenant / Base)
@@ -61,7 +61,7 @@ For each tenant (including base), use a small set of stacks:
 
 | Layer | Stack name pattern | Template | Contents |
 |-------|--------------------|----------|----------|
-| Network | `{prefix}-{tenant-id}-network` | `network.yaml` | VPC, subnets, NAT, VPC endpoints. |
+| Network (LZ) | *(none — no nested stack)* | — | VPC and subnet IDs come from **SSM** (Landing Zone). Root `main.yaml` uses `AWS::SSM::Parameter::Value<…>` parameters; values are passed into security, ALB, RDS, and ECS modules. |
 | Security | `{prefix}-{tenant-id}-security` | `security.yaml` | IAM roles, security groups, KMS (optional). |
 | Secrets | per app | `secrets.yaml` | Secrets Manager (or Parameter Store) placeholders. |
 | Data (per app) | e.g. RdsFooAppStack | `rds.yaml` | RDS per app. |
@@ -81,7 +81,7 @@ For each tenant (including base), use a small set of stacks:
 
 ### 3.4 Nested vs Flat Stacks
 
-- **Nested stacks**: Use a root stack per tenant that includes child stacks (network, security, data, compute). Eases single-command deploy; harder to partial update.
+- **Nested stacks**: Use a root stack per tenant that includes child stacks (security, secrets, RDS, ALB, ECS cluster, ECS services). Eases single-command deploy; harder to partial update.
 - **Flat stacks**: Pipeline deploys each stack separately in order. Better for selective updates and rollback of a single layer.
 - Recommendation: Start with **flat stacks** and a clear order in the pipeline; introduce a root stack later if desired.
 
@@ -94,7 +94,6 @@ Current layout (root stack per tenant/environment with nested stacks):
 │   ├── tenant-registry.yaml   # config/tenant-registry.yaml in this repo
 │   └── app-registry.yaml
 ├── templates/
-│   ├── network.yaml
 │   ├── security.yaml
 │   ├── secrets.yaml
 │   ├── rds.yaml            # RDS per app
@@ -117,7 +116,7 @@ Current layout (root stack per tenant/environment with nested stacks):
 │   ├── deploy-tenant.sh
 │   ├── get-tenant-envs.sh
 │   ├── get-tenant-region.sh
-│   └── upload-templates.sh
+│   └── upload-config-templates.sh
 └── docs/
     └── (this documentation)
 ```

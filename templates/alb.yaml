@@ -13,6 +13,13 @@ Parameters:
     Type: String
     Default: mt
     Description: Prefix for stack and resource names
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID (from Landing Zone SSM, passed from root stack)
+  PublicSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
 
 Resources:
   AlbSecurityGroup:
@@ -20,8 +27,7 @@ Resources:
     Properties:
       GroupName: !Sub "${StackPrefix}-${TenantId}-${Environment}-alb-sg"
       GroupDescription: Security group for ALB
-      VpcId: !ImportValue
-        Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-VpcId"
+      VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
@@ -45,10 +51,8 @@ Resources:
       Type: application
       Scheme: internet-facing
       Subnets:
-        - !ImportValue
-          Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-PublicSubnet1Id"
-        - !ImportValue
-          Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-PublicSubnet2Id"
+        - !Ref PublicSubnet1Id
+        - !Ref PublicSubnet2Id
       SecurityGroups: [!Ref AlbSecurityGroup]
       Tags:
         - Key: Name
@@ -66,8 +70,7 @@ Resources:
       Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-tg-foo"
       Port: 8080
       Protocol: HTTP
-      VpcId: !ImportValue
-        Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-VpcId"
+      VpcId: !Ref VpcId
       TargetType: ip
       HealthCheckEnabled: true
       HealthCheckPath: /
@@ -86,8 +89,7 @@ Resources:
       Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-tg-baz"
       Port: 8080
       Protocol: HTTP
-      VpcId: !ImportValue
-        Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-VpcId"
+      VpcId: !Ref VpcId
       TargetType: ip
       HealthCheckEnabled: true
       HealthCheckPath: /

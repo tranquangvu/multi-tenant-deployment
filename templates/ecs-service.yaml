@@ -52,6 +52,15 @@ Parameters:
     MinValue: 0
     MaxValue: 10
     Description: Desired number of tasks
+  ClusterName:
+    Type: String
+    Description: ECS cluster name (from ecs-cluster nested stack)
+  PrivateSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+  AppSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
 
 Conditions:
   HasTargetGroup: !Not [!Equals [!Ref TargetGroupArn, ""]]
@@ -170,8 +179,7 @@ Resources:
     DependsOn: TaskDefinition
     Properties:
       ServiceName: !Sub "${StackPrefix}-${TenantId}-${Environment}-${AppId}-svc"
-      Cluster: !ImportValue
-        Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-ClusterName"
+      Cluster: !Ref ClusterName
       TaskDefinition: !Ref TaskDefinition
       DesiredCount: !Ref DesiredCount
       LaunchType: FARGATE
@@ -184,13 +192,10 @@ Resources:
         AwsvpcConfiguration:
           AssignPublicIp: DISABLED
           Subnets:
-            - !ImportValue
-              Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-PrivateSubnet1Id"
-            - !ImportValue
-              Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-PrivateSubnet2Id"
+            - !Ref PrivateSubnet1Id
+            - !Ref PrivateSubnet2Id
           SecurityGroups:
-            - !ImportValue
-              Fn::Sub: "${StackPrefix}-${TenantId}-${Environment}-AppSecurityGroupId"
+            - !Ref AppSecurityGroupId
       LoadBalancers: !If
         - HasTargetGroup
         - - TargetGroupArn: !Ref TargetGroupArn
