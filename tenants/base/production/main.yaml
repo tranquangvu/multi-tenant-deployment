@@ -41,15 +41,6 @@ Parameters:
   PrivateSubnet2SsmPath:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Subnet::Id>
     Description: SSM path for second private subnet id; resolved at deploy.
-  BitbucketOidcAudience:
-    Type: String
-    Default: pip
-  BitbucketWorkspace:
-    Type: String
-    Default: my-workspace
-  BitbucketRepo:
-    Type: String
-    Default: "*"
   FooAppDesiredCount:
     Type: Number
     Default: 1
@@ -71,9 +62,6 @@ Resources:
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
         VpcId: !Ref VpcIdSsmPath
-        BitbucketOidcAudience: !Ref BitbucketOidcAudience
-        BitbucketWorkspace: !Ref BitbucketWorkspace
-        BitbucketRepo: !Ref BitbucketRepo
 
   SecretsFooAppStack:
     Type: AWS::CloudFormation::Stack

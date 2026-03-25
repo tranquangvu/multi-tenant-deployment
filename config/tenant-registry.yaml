@@ -24,14 +24,14 @@ tenants:
     region: ap-southeast-1
     environments:
       staging:
-        accountId: '862344888019'
-        accountName: 'Sanbox'
+        accountId: '091457645177'
+        accountName: 'goldenowl'
         networkVpcName: 'Sanbox-VPC'
         networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
         networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
       production:
-        accountId: '862344888019'
-        accountName: 'Sanbox'
+        accountId: '091457645177'
+        accountName: 'goldenowl'
         networkVpcName: 'Sanbox-VPC'
         networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
         networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
@@ -42,8 +42,8 @@ tenants:
     region: ap-southeast-1
     environments:
       production:
-        accountId: '862344888019'
-        accountName: 'Sanbox'
+        accountId: '091457645177'
+        accountName: 'goldenowl'
         networkVpcName: 'Sanbox-VPC'
         networkPublicSubnetNames: ['PrivateAppA', 'PrivateAppB']
         networkPrivateSubnetNames: ['PublicInboundA', 'PublicInboundB']
@@ -54,8 +54,8 @@ tenants:
     region: ap-southeast-1
     environments:
       production:
-        accountId: '862344888019'
-        accountName: 'Sanbox'
+        accountId: '091457645177'
+        accountName: 'goldenowl'
         networkVpcName: 'Sanbox-VPC'
         networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
         networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']

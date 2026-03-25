@@ -155,3 +155,43 @@ pipelines:
 
 - Each tenant deploy runs **independently**: one tenant’s failure must not stop or affect others.
 - In `promote-tenants.sh`: loop over selected tenants; for each tenant, run deploy in a subshell or capture exit code; log success/fail per tenant; continue to next tenant. Final pipeline status can be “failed” if any tenant failed, but all attempted tenants are logged.
+
+
+## 7. Accounts & Permissions
+
+                    ┌───────────────────────────────┐
+                    │       Bitbucket Pipelines     │
+                    │  (OIDC token, CI/CD jobs)     │
+                    └───────────────┬───────────────┘
+                                    │
+                                    │ OIDC authentication
+                                    │
+                                    ▼
+                    ┌──────────────────────────────-─┐
+                    │   Shared Services Account      │
+                    │  Role: BitbucketOIDCRole       │
+                    │  Permissions:                  │
+                    │   - assume tenant roles        │
+                    │   - build/push central ECR     │
+                    └───────────────┬───────────────-┘
+                                    │ AssumeRole to tenant
+                                    │
+            ┌───────────────────────┴─-───────────────────────┐
+            │                                                 │
+            ▼                                                 ▼
+  ┌─────────────────────--┐                           ┌─────────────────────--┐
+  │ Tenant A Account      │                           │ Tenant B Account      │
+  │ Role: TenantDeployRole│                           │ Role: TenantDeployRole│
+  │ Permissions:          │                           │ Permissions:          │
+  │  - CloudFormation     │                           │  - CloudFormation     │
+  │  - ECS / VPC / IAM    │                           │  - ECS / VPC / IAM    │
+  │  - Pull from ECR      │                           │  - Pull from ECR      │
+  └──────────┬─-----──────┘                           └─────────---┬───────---┘
+            │                                                   │
+            │ CloudFormation / ECS deploy                       │ CloudFormation / ECS deploy
+            ▼                                                   ▼
+  ┌──────────────-───┐                                  ┌─────────────────-┐
+  │ Tenant A ECS     │                                  │ Tenant B ECS     │
+  │ Tasks / Services │                                  │ Tasks / Services │
+  │ VPC / Subnets    │                                  │ VPC / Subnets    │
+  └───────────────-──┘                                  └─────────────────-┘

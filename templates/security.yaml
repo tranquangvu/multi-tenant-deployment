@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Module: Security - Security groups, IAM pipeline role. One per (TenantId, Environment)."
+Description: "Module: Security - security groups and network metadata. One per (TenantId, Environment)."
 
 Parameters:
   TenantId:
@@ -16,15 +16,6 @@ Parameters:
   VpcId:
     Type: AWS::EC2::VPC::Id
     Description: VPC ID (from Landing Zone SSM, passed from root stack)
-  BitbucketOidcAudience:
-    Type: String
-    Default: pip
-  BitbucketWorkspace:
-    Type: String
-    Default: my-workspace
-  BitbucketRepo:
-    Type: String
-    Default: "*"
 
 Resources:
   VpcIdImport:
@@ -87,66 +78,6 @@ Resources:
       SourceSecurityGroupId: !Ref AppSecurityGroup
       Description: Allow PostgreSQL from app SG
 
-  PipelineRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub "${StackPrefix}-${TenantId}-${Environment}-pipeline-role"
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Federated: !Sub "arn:aws:iam::${AWS::AccountId}:oidc-provider/bitbucket.org"
-            Action: sts:AssumeRoleWithWebIdentity
-            Condition:
-              StringEquals:
-                bitbucket.org:aud: !Ref BitbucketOidcAudience
-              StringLike:
-                bitbucket.org:sub: !Sub "repo:${BitbucketWorkspace}/${BitbucketRepo}:*"
-      Tags:
-        - Key: TenantId
-          Value: !Ref TenantId
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: ManagedBy
-          Value: CloudFormation
-
-  PipelineRolePolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      ManagedPolicyName: !Sub "${StackPrefix}-${TenantId}-${Environment}-pipeline-policy"
-      Roles: [!Ref PipelineRole]
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Action:
-              - cloudformation:*
-              - s3:GetObject
-              - s3:PutObject
-              - s3:ListBucket
-              - iam:PassRole
-              - ec2:Describe*
-              - ecr:GetAuthorizationToken
-            Resource: "*"
-          - Effect: Allow
-            Action:
-              - ecr:BatchCheckLayerAvailability
-              - ecr:GetDownloadUrlForLayer
-              - ecr:BatchGetImage
-            Resource: !Sub "arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/*"
-          - Effect: Allow
-            Action:
-              - secretsmanager:GetSecretValue
-            Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${StackPrefix}-${TenantId}-${Environment}-*"
-          - Effect: Allow
-            Action:
-              - ssm:GetParameter
-              - ssm:GetParameters
-            Resource:
-              - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${StackPrefix}/${TenantId}/${Environment}/*"
-              - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/accelerator/*"
-              - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/network/*"
 
 Outputs:
   AppSecurityGroupId:
@@ -159,8 +90,3 @@ Outputs:
     Value: !Ref DbSecurityGroup
     Export:
       Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-DbSecurityGroupId"
-  PipelineRoleArn:
-    Description: IAM role ARN for Bitbucket pipeline
-    Value: !GetAtt PipelineRole.Arn
-    Export:
-      Name: !Sub "${StackPrefix}-${TenantId}-${Environment}-PipelineRoleArn"
