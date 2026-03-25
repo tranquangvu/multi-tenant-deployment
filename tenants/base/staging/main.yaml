@@ -95,19 +95,19 @@ Resources:
         Environment: !Ref Environment
         StackPrefix: !Ref StackPrefix
 
-  RdsFooAppStack:
-    Type: AWS::CloudFormation::Stack
-    DependsOn: SecretsFooAppStack
-    Properties:
-      TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/rds.yaml"
-      Parameters:
-        TenantId: !Ref TenantId
-        Environment: !Ref Environment
-        StackPrefix: !Ref StackPrefix
-        AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
-        AppId: foo
-        PrivateSubnet1Id: !Ref PrivateSubnet1SsmPath
-        PrivateSubnet2Id: !Ref PrivateSubnet2SsmPath
+  # RdsFooAppStack:
+  #   Type: AWS::CloudFormation::Stack
+  #   DependsOn: SecretsFooAppStack
+  #   Properties:
+  #     TemplateURL: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplateS3Bucket}/${TemplateS3Prefix}/rds.yaml"
+  #     Parameters:
+  #       TenantId: !Ref TenantId
+  #       Environment: !Ref Environment
+  #       StackPrefix: !Ref StackPrefix
+  #       AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
+  #       AppId: foo
+  #       PrivateSubnet1Id: !Ref PrivateSubnet1SsmPath
+  #       PrivateSubnet2Id: !Ref PrivateSubnet2SsmPath
 
   AlbStack:
     Type: AWS::CloudFormation::Stack
@@ -141,9 +141,9 @@ Resources:
           Fn::Sub: "${StackPrefix}-foo-EcrRepoUri"
         TargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupFooArn
         DesiredCount: !Ref FooAppDesiredCount
-        DbEndpoint: !GetAtt RdsFooAppStack.Outputs.DbEndpoint
-        DbPort: !GetAtt RdsFooAppStack.Outputs.DbPort
-        DbName: !GetAtt RdsFooAppStack.Outputs.DbName
+        # DbEndpoint: !GetAtt RdsFooAppStack.Outputs.DbEndpoint
+        # DbPort: !GetAtt RdsFooAppStack.Outputs.DbPort
+        # DbName: !GetAtt RdsFooAppStack.Outputs.DbName
         AppSecretArn: !GetAtt SecretsFooAppStack.Outputs.AppSecretArn
         # Testing with public subnet only
         AssignPublicIp: ENABLED
