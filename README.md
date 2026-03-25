@@ -5,7 +5,7 @@
 ## Structure
 
 - **`config/`** — Tenant and app registry (YAML)
-  - `tenant-registry.yaml` — Tenants (base, abc, xyz), region, environments. Used by `deploy-tenant.sh` and `get-tenant-region.sh` / `get-tenant-envs.sh`.
+  - `tenant-registry.yaml` — Tenants (base, abc, xyz), region, and per-environment metadata. Currently used by `deploy-tenant.sh` and `get-tenant-region.sh` / `get-tenant-envs.sh` for tenant/environment resolution.
   - `app-registry.yaml` — Applications (foo, baz).
 - **`templates/`** — CloudFormation module templates (network, security, secrets, rds, alb, ecs-cluster, ecs-service, ecr). Uploaded to S3 for root stack deployment via **`./scripts/upload-templates.sh`**.
 - **`shared/`** — Shared resources: ECR repositories per app via **`shared/main.yaml`** (nested stacks from S3). Deploy with **`./scripts/deploy-shared.sh`** once per account/region; tenant stacks import ECR URI via CloudFormation export.
@@ -64,6 +64,22 @@ multi-tenant-deployment/
     ├── get-tenant-envs.sh
     └── get-tenant-region.sh
 ```
+
+## Tenant registry schema
+
+`config/tenant-registry.yaml` now stores per-environment account and network metadata:
+
+- `tenants.<tenant>.region` — deployment region.
+- `tenants.<tenant>.environments.<env>.accountId` — AWS account ID.
+- `tenants.<tenant>.environments.<env>.accountName` — account display name.
+- `tenants.<tenant>.environments.<env>.networkVpcName` — target VPC name.
+- `tenants.<tenant>.environments.<env>.networkPublicSubnetNames` — public subnet names.
+- `tenants.<tenant>.environments.<env>.networkPrivateSubnetNames` — private subnet names.
+
+Current behavior:
+
+- Deployment scripts read tenant + environment availability and region from this registry.
+- Account and network name fields are tracked metadata and are intended for expanding automation (for example, account/role routing and environment-specific network resolution).
 
 ## Deploy (root stack via S3)
 
@@ -126,4 +142,4 @@ Pipeline uses OIDC (`oidc: true`); set `AWS_ROLE_ARN` in repo or deployment envi
 
 ## Multi-account
 
-Use one S3 bucket per account (or a shared bucket with prefix per account). Run upload and deploy in the target account (or after assuming the tenant role). Tenant account IDs can be added to `config/tenant-registry.yaml` under `accounts` per environment for Landing Zone / multi-account. See [docs/02-architecture-and-tenant-model.md](docs/02-architecture-and-tenant-model.md) and [docs/07-runbooks.md](docs/07-runbooks.md).
+Use one S3 bucket per account (or a shared bucket with prefix per account). Run upload and deploy in the target account (or after assuming the tenant role). Tenant environment metadata (including `accountId`) is tracked in `config/tenant-registry.yaml` under `tenants.<tenant>.environments.<env>`. See [docs/02-architecture-and-tenant-model.md](docs/02-architecture-and-tenant-model.md) and [docs/07-runbooks.md](docs/07-runbooks.md).
