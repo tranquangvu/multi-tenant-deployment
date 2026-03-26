@@ -1,8 +1,9 @@
 # Bitbucket Pipelines — Infrastructure repo (multi-tenant CloudFormation)
 # 1) Upload templates to S3  2) Deploy root stack (main.yaml) per tenant/env.
 # Base has staging + production; other tenants (abc, xyz) have production only.
-# OIDC: set AWS_ROLE_ARN in each deployment environment (and repo var for upload-config-templates).
-# Repo variables: INFRA_S3_BUCKET, TEMPLATE_S3_PREFIX, CONFIG_S3_PREFIX, AWS_ROLE_ARN (for upload-config-templates).
+# OIDC: AWS_ROLE_ARN is resolved dynamically from config/tenant-registry.yaml
+# using accountId + bitbucketOidcRoleName for the target tenant/environment.
+# Repo variables: INFRA_S3_BUCKET, TEMPLATE_S3_PREFIX, CONFIG_S3_PREFIX.
 
 image: amazon/aws-cli:latest
 
@@ -24,8 +25,12 @@ definitions:
         oidc: true
         script:
           - chmod +x ./scripts/*.sh
+          - ./scripts/install-ci-deps.sh
+          - export AWS_ROLE_ARN="$(./scripts/get-shared-oidc-role-arn.sh)"
           - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
           - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
+          - export AWS_DEFAULT_REGION="$(./scripts/get-shared-region.sh)"
+          - export AWS_REGION="$AWS_DEFAULT_REGION"
           - ./scripts/upload-config-templates.sh
 
     - step: &deploy-base-production
@@ -34,6 +39,7 @@ definitions:
         script:
           - chmod +x ./scripts/*.sh
           - ./scripts/install-ci-deps.sh
+          - export AWS_ROLE_ARN="$(./scripts/get-tenant-oidc-role-arn.sh base production)"
           - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
           - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
           - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
@@ -57,7 +63,7 @@ pipelines:
     # Deploy root stack for one tenant.
     # - If DEPLOY_ENVIRONMENT is provided: deploy that environment for the tenant.
     # - If DEPLOY_ENVIRONMENT is empty/omitted: deploy all environments for the tenant from tenant-registry.yaml.
-    # Set AWS_ROLE_ARN in repo vars or use a deployment env that matches the tenant/env.
+    # AWS_ROLE_ARN is resolved dynamically from tenant-registry accountId + bitbucketOidcRoleName.
     deploy-tenant:
       - variables:
           - name: DEPLOY_TENANT_ID
@@ -74,12 +80,18 @@ pipelines:
             - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
             - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh $DEPLOY_TENANT_ID)"
             - export AWS_REGION="$AWS_DEFAULT_REGION"
-            - ./scripts/deploy-shared.sh
             - |
               if [[ -n "${DEPLOY_ENVIRONMENT:-}" ]]; then
+                export AWS_ROLE_ARN="$(./scripts/get-tenant-oidc-role-arn.sh "$DEPLOY_TENANT_ID" "$DEPLOY_ENVIRONMENT")"
+                ./scripts/deploy-shared.sh
                 ./scripts/deploy-tenant.sh "$DEPLOY_TENANT_ID" "$DEPLOY_ENVIRONMENT"
               else
-                ./scripts/deploy-tenant.sh "$DEPLOY_TENANT_ID"
+                ENVS="$(./scripts/get-tenant-envs.sh "$DEPLOY_TENANT_ID")"
+                for env in $ENVS; do
+                  export AWS_ROLE_ARN="$(./scripts/get-tenant-oidc-role-arn.sh "$DEPLOY_TENANT_ID" "$env")"
+                  ./scripts/deploy-shared.sh
+                  ./scripts/deploy-tenant.sh "$DEPLOY_TENANT_ID" "$env"
+                done
               fi
 
     # Delete root stack for one tenant.
@@ -106,13 +118,18 @@ pipelines:
             - export AWS_REGION="$AWS_DEFAULT_REGION"
             - |
               if [[ -n "${DELETE_ENVIRONMENT:-}" ]]; then
+                export AWS_ROLE_ARN="$(./scripts/get-tenant-oidc-role-arn.sh "$DELETE_TENANT_ID" "$DELETE_ENVIRONMENT")"
                 CONFIRM_DELETE_TENANT="$CONFIRM_DELETE_TENANT" ./scripts/delete-tenant.sh "$DELETE_TENANT_ID" "$DELETE_ENVIRONMENT"
               else
-                CONFIRM_DELETE_TENANT="$CONFIRM_DELETE_TENANT" ./scripts/delete-tenant.sh "$DELETE_TENANT_ID"
+                ENVS="$(./scripts/get-tenant-envs.sh "$DELETE_TENANT_ID")"
+                for env in $ENVS; do
+                  export AWS_ROLE_ARN="$(./scripts/get-tenant-oidc-role-arn.sh "$DELETE_TENANT_ID" "$env")"
+                  CONFIRM_DELETE_TENANT="$CONFIRM_DELETE_TENANT" ./scripts/delete-tenant.sh "$DELETE_TENANT_ID" "$env"
+                done
               fi
 
     # Promote to multiple tenants (production only for abc/xyz)
-    # Set AWS_ROLE_ARN (e.g. a role that can assume per-tenant roles, or one role per tenant via deployment).
+    # AWS_ROLE_ARN is resolved dynamically from tenant-registry accountId + bitbucketOidcRoleName.
     deploy-tenants-production:
       - variables:
           - name: TARGET_TENANTS
@@ -135,6 +152,7 @@ pipelines:
               IFS=',' read -ra TARR <<< "$TARGET_TENANTS"
               for t in "${TARR[@]}"; do
                 echo "Deploying $t production..."
+                export AWS_ROLE_ARN="$(./scripts/get-tenant-oidc-role-arn.sh "$t" production)"
                 export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh "$t")"
                 export AWS_REGION="$AWS_DEFAULT_REGION"
                 ./scripts/deploy-shared.sh

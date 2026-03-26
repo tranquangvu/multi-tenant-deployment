@@ -25,14 +25,14 @@ tenants:
     environments:
       staging:
         accountId: '091457645177'
-        accountName: 'goldenowl'
+        accountName: 'GoldenOwl'
         networkVpcName: 'Sanbox-VPC'
         networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
         networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
         bitbucketOidcRoleName: 'bitbucket-oidc-role'
       production:
         accountId: '091457645177'
-        accountName: 'goldenowl'
+        accountName: 'GoldenOwl'
         networkVpcName: 'Sanbox-VPC'
         networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
         networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
@@ -45,7 +45,7 @@ tenants:
     environments:
       production:
         accountId: '091457645177'
-        accountName: 'goldenowl'
+        accountName: 'GoldenOwl'
         networkVpcName: 'ABC'
         networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
         networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
@@ -58,8 +58,14 @@ tenants:
     environments:
       production:
         accountId: '091457645177'
-        accountName: 'goldenowl'
+        accountName: 'GoldenOwl'
         networkVpcName: 'XYZ'
         networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
         networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
         bitbucketOidcRoleName: 'bitbucket-oidc-role'
+
+shared:
+  region: ap-southeast-1
+  accountId: '091457645177'
+  accountName: 'GoldenOwl'
+  bitbucketOidcRoleName: 'bitbucket-oidc-role'
