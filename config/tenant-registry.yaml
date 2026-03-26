@@ -29,12 +29,14 @@ tenants:
         networkVpcName: 'Sanbox-VPC'
         networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
         networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
+        bitbucketOidcRoleName: 'bitbucket-oidc-role'
       production:
         accountId: '091457645177'
         accountName: 'goldenowl'
         networkVpcName: 'Sanbox-VPC'
         networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
         networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
+        bitbucketOidcRoleName: 'bitbucket-oidc-role'
 
   abc:
     id: abc
@@ -47,6 +49,7 @@ tenants:
         networkVpcName: 'ABC'
         networkPublicSubnetNames: ['PrivateAppA', 'PrivateAppB']
         networkPrivateSubnetNames: ['PublicInboundA', 'PublicInboundB']
+        bitbucketOidcRoleName: 'bitbucket-oidc-role'
 
   xyz:
     id: xyz
@@ -59,3 +62,4 @@ tenants:
         networkVpcName: 'Sanbox-VPC'
         networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
         networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
+        bitbucketOidcRoleName: 'bitbucket-oidc-role'
