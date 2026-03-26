@@ -86,8 +86,8 @@ export AWS_DEFAULT_REGION="$REGION"
 export AWS_REGION="$REGION"
 echo "Deploying tenant=$TENANT_ID env=$ENV_NAME to region: $REGION"
 
-if ! command -v ruby >/dev/null 2>&1; then
-  echo "ruby is required to merge network SSM paths from tenant-registry.yaml" >&2
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "python3 is required to merge network SSM paths from tenant-registry.yaml" >&2
   exit 1
 fi
 if ! command -v jq >/dev/null 2>&1; then
@@ -137,13 +137,13 @@ if [[ ! -x "$DEPLOY_STACK" ]]; then
   exit 1
 fi
 
-NETWORK_RUBY="$SCRIPT_DIR/tenant-network-ssm-params.rb"
-if [[ ! -f "$NETWORK_RUBY" ]]; then
-  echo "Missing $NETWORK_RUBY" >&2
+NETWORK_PY="$SCRIPT_DIR/tenant-network-ssm-params.py"
+if [[ ! -f "$NETWORK_PY" ]]; then
+  echo "Missing $NETWORK_PY" >&2
   exit 1
 fi
 
-NETWORK_JSON="$(ruby "$NETWORK_RUBY" "$TENANT_REGISTRY" "$TENANT_ID" "$ENV_NAME")"
+NETWORK_JSON="$(python3 "$NETWORK_PY" "$TENANT_REGISTRY" "$TENANT_ID" "$ENV_NAME")"
 MERGED_PARAMS="$(mktemp)"
 trap 'rm -f "$MERGED_PARAMS"' EXIT
 jq --argjson net "$NETWORK_JSON" '. + $net' "$PARAMS_PATH" > "$MERGED_PARAMS"

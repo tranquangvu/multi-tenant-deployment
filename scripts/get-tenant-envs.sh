@@ -19,15 +19,29 @@ if [[ ! -f "$TENANT_REGISTRY" ]]; then
   exit 1
 fi
 
-if ! command -v ruby >/dev/null 2>&1; then
-  echo "ruby is required to parse $TENANT_REGISTRY" >&2
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "python3 is required to parse $TENANT_REGISTRY" >&2
   exit 1
 fi
 
-ruby -ryaml -e '
-  r = YAML.load_file(ARGV[0])
-  t = r["tenants"][ARGV[1]] or abort("unknown tenant")
-  envs = t["environments"] or abort("no environments")
-  abort("environments must be a map") unless envs.is_a?(Hash)
-  puts envs.keys.join(" ")
-' "$TENANT_REGISTRY" "$TENANT_ID"
+python3 - "$TENANT_REGISTRY" "$TENANT_ID" <<'PY'
+import sys
+try:
+    import yaml
+except Exception:
+    raise SystemExit("python package 'pyyaml' is required")
+
+registry_path = sys.argv[1]
+tenant_id = sys.argv[2]
+
+with open(registry_path, "r", encoding="utf-8") as f:
+    data = yaml.safe_load(f) or {}
+
+tenant = (data.get("tenants") or {}).get(tenant_id)
+if not tenant:
+    raise SystemExit("unknown tenant")
+envs = tenant.get("environments")
+if not isinstance(envs, dict) or not envs:
+    raise SystemExit("no environments")
+print(" ".join(envs.keys()))
+PY

@@ -13,15 +13,31 @@ if [[ ! -f "$REGISTRY" ]]; then
   exit 1
 fi
 
-if ! command -v ruby >/dev/null 2>&1; then
-  echo "ruby is required (parse tenant-registry.yaml)" >&2
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "python3 is required (parse tenant-registry.yaml)" >&2
   exit 1
 fi
 
-ruby -ryaml -e '
-  r = YAML.load_file(ARGV[0])
-  t = r["tenants"][ARGV[1]] or abort("unknown tenant")
-  e = t["environments"][ARGV[2]] or abort("unknown environment")
-  id = e["accountId"] or abort("missing accountId")
-  puts id.to_s
-' "$REGISTRY" "$TENANT_ID" "$ENV_NAME"
+python3 - "$REGISTRY" "$TENANT_ID" "$ENV_NAME" <<'PY'
+import sys
+try:
+    import yaml
+except Exception:
+    raise SystemExit("python package 'pyyaml' is required")
+
+registry_path, tenant_id, env_name = sys.argv[1:4]
+
+with open(registry_path, "r", encoding="utf-8") as f:
+    data = yaml.safe_load(f) or {}
+
+tenant = (data.get("tenants") or {}).get(tenant_id)
+if not tenant:
+    raise SystemExit("unknown tenant")
+env = (tenant.get("environments") or {}).get(env_name)
+if not env:
+    raise SystemExit("unknown environment")
+account_id = env.get("accountId")
+if not account_id:
+    raise SystemExit("missing accountId")
+print(str(account_id))
+PY
