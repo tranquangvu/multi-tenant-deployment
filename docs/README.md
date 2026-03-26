@@ -6,13 +6,11 @@ This directory contains the design and implementation documentation for the **Mu
 
 | Document | Description |
 |----------|-------------|
-| [01-infrastructure-plan.md](01-infrastructure-plan.md) | Master plan: scope, deliverables, task checklist, and traceability |
-| [02-architecture-and-tenant-model.md](02-architecture-and-tenant-model.md) | Architecture diagram, tenant model, metadata schema, naming conventions |
-| [03-aws-and-cloudformation-design.md](03-aws-and-cloudformation-design.md) | AWS account strategy, Landing Zone, CloudFormation stack design and IaC structure |
-| [04-bitbucket-pipelines-and-cicd.md](04-bitbucket-pipelines-and-cicd.md) | CI/CD design: base tenant deployment, promotion, validation, Jira integration |
-| [05-database-migrations-and-rollback.md](05-database-migrations-and-rollback.md) | Flyway migrations and per-tenant rollback strategy |
-| [06-logging-monitoring-and-operations.md](06-logging-monitoring-and-operations.md) | Centralized logging, monitoring, alerting, and operations |
-| [07-runbooks.md](07-runbooks.md) | Operational runbooks: deploy to base, promote, rollback, add tenant, troubleshoot |
+| [01-architecture-and-tenant-model.md](01-architecture-and-tenant-model.md) | Architecture diagram, tenant model, metadata schema, naming conventions |
+| [02-aws-and-cloudformation-design.md](02-aws-and-cloudformation-design.md) | AWS account strategy, Landing Zone, CloudFormation stack design and IaC structure |
+| [03-bitbucket-pipelines-and-cicd.md](03-bitbucket-pipelines-and-cicd.md) | CI/CD design: base tenant deployment, promotion, validation, Jira integration |
+| [04-logging-monitoring-and-operations.md](04-logging-monitoring-and-operations.md) | Centralized logging, monitoring, alerting, and operations |
+| [05-runbooks.md](07-runbooks.md) | Operational runbooks: deploy to base, promote, rollback, add tenant, troubleshoot |
 
 ## Quick Reference
 

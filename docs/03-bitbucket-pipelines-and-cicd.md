@@ -159,39 +159,39 @@ pipelines:
 
 ## 7. Accounts & Permissions
 
-                    ┌───────────────────────────────┐
-                    │       Bitbucket Pipelines     │
-                    │  (OIDC token, CI/CD jobs)     │
-                    └───────────────┬───────────────┘
-                                    │
-                                    │ OIDC authentication
-                                    │
-                                    ▼
-                    ┌──────────────────────────────-─┐
-                    │   Shared Services Account      │
-                    │  Role: BitbucketOIDCRole       │
-                    │  Permissions:                  │
-                    │   - assume tenant roles        │
-                    │   - build/push central ECR     │
-                    └───────────────┬───────────────-┘
-                                    │ AssumeRole to tenant
-                                    │
-            ┌───────────────────────┴─-───────────────────────┐
-            │                                                 │
-            ▼                                                 ▼
-  ┌─────────────────────--┐                           ┌─────────────────────--┐
-  │ Tenant A Account      │                           │ Tenant B Account      │
-  │ Role: TenantDeployRole│                           │ Role: TenantDeployRole│
-  │ Permissions:          │                           │ Permissions:          │
-  │  - CloudFormation     │                           │  - CloudFormation     │
-  │  - ECS / VPC / IAM    │                           │  - ECS / VPC / IAM    │
-  │  - Pull from ECR      │                           │  - Pull from ECR      │
-  └──────────┬─-----──────┘                           └─────────---┬───────---┘
-            │                                                   │
-            │ CloudFormation / ECS deploy                       │ CloudFormation / ECS deploy
-            ▼                                                   ▼
-  ┌──────────────-───┐                                  ┌─────────────────-┐
-  │ Tenant A ECS     │                                  │ Tenant B ECS     │
-  │ Tasks / Services │                                  │ Tasks / Services │
-  │ VPC / Subnets    │                                  │ VPC / Subnets    │
-  └───────────────-──┘                                  └─────────────────-┘
+                          ┌───────────────────────────────┐
+                          │       Bitbucket Pipelines     │
+                          │  (OIDC token, CI/CD jobs)     │
+                          └───────────────┬───────────────┘
+                                          │
+                                          │ OIDC authentication
+                                          │
+                                          ▼
+                          ┌──────────────────────────────-─┐
+                          │   Shared Services Account      │
+                          │  Role: BitbucketOIDCRole       │
+                          │  Permissions:                  │
+                          │   - assume tenant roles        │
+                          │   - build/push central ECR     │
+                          └───────────────┬───────────────-┘
+                                          │ AssumeRole to tenant
+                                          │
+                  ┌───────────────────────┴─-───────────────────────┐
+                  │                                                 │
+                  ▼                                                 ▼
+        ┌─────────────────────--┐                           ┌─────────────────────--┐
+        │ Tenant A Account      │                           │ Tenant B Account      │
+        │ Role: TenantDeployRole│                           │ Role: TenantDeployRole│
+        │ Permissions:          │                           │ Permissions:          │
+        │  - CloudFormation     │                           │  - CloudFormation     │
+        │  - ECS / VPC / IAM    │                           │  - ECS / VPC / IAM    │
+        │  - Pull from ECR      │                           │  - Pull from ECR      │
+        └──────────┬─-----──────┘                           └─────────---┬───────---┘
+                  │                                                   │
+                  │ CloudFormation / ECS deploy                       │ CloudFormation / ECS deploy
+                  ▼                                                   ▼
+        ┌──────────────-───┐                                  ┌─────────────────-┐
+        │ Tenant A ECS     │                                  │ Tenant B ECS     │
+        │ Tasks / Services │                                  │ Tasks / Services │
+        │ VPC / Subnets    │                                  │ VPC / Subnets    │
+        └───────────────-──┘                                  └─────────────────-┘
