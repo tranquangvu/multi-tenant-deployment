@@ -157,41 +157,216 @@ pipelines:
 - In `promote-tenants.sh`: loop over selected tenants; for each tenant, run deploy in a subshell or capture exit code; log success/fail per tenant; continue to next tenant. Final pipeline status can be “failed” if any tenant failed, but all attempted tenants are logged.
 
 
-## 7. Accounts & Permissions
+## 7. Accounts
 
-                          ┌───────────────────────────────┐
-                          │       Bitbucket Pipelines     │
-                          │  (OIDC token, CI/CD jobs)     │
-                          └───────────────┬───────────────┘
-                                          │
-                                          │ OIDC authentication
-                                          │
-                                          ▼
-                          ┌──────────────────────────────-─┐
-                          │   Shared Services Account      │
-                          │  Role: BitbucketOIDCRole       │
-                          │  Permissions:                  │
-                          │   - assume tenant roles        │
-                          │   - build/push central ECR     │
-                          └───────────────┬───────────────-┘
-                                          │ AssumeRole to tenant
-                                          │
-                  ┌───────────────────────┴─-───────────────────────┐
-                  │                                                 │
-                  ▼                                                 ▼
-        ┌─────────────────────--┐                           ┌─────────────────────--┐
-        │ Tenant A Account      │                           │ Tenant B Account      │
-        │ Role: TenantDeployRole│                           │ Role: TenantDeployRole│
-        │ Permissions:          │                           │ Permissions:          │
-        │  - CloudFormation     │                           │  - CloudFormation     │
-        │  - ECS / VPC / IAM    │                           │  - ECS / VPC / IAM    │
-        │  - Pull from ECR      │                           │  - Pull from ECR      │
-        └──────────┬─-----──────┘                           └─────────---┬───────---┘
-                  │                                                   │
-                  │ CloudFormation / ECS deploy                       │ CloudFormation / ECS deploy
-                  ▼                                                   ▼
-        ┌──────────────-───┐                                  ┌─────────────────-┐
-        │ Tenant A ECS     │                                  │ Tenant B ECS     │
-        │ Tasks / Services │                                  │ Tasks / Services │
-        │ VPC / Subnets    │                                  │ VPC / Subnets    │
-        └───────────────-──┘                                  └─────────────────-┘
+### 🧠 Overview
+
+In a multi-tenant architecture using multiple AWS accounts:
+
+-   Each **tenant** has its own AWS account
+-   A **Shared Services Account** handles CI/CD
+-   CI/CD (e.g., Bitbucket Pipelines) does **not deploy directly**
+-   Instead, it uses **AssumeRole** to access each tenant account
+    securely
+
+                  ┌───────────────────────────────┐
+                  │       Bitbucket Pipelines     │
+                  │  (OIDC token, CI/CD jobs)     │
+                  └───────────────┬───────────────┘
+                                  │
+                                  │ OIDC authentication
+                                  │
+                                  ▼
+                  ┌──────────────────────────────-─┐
+                  │   Shared Services Account      │
+                  │  Role: BitbucketOIDCRole       │
+                  │  Permissions:                  │
+                  │   - assume tenant roles        │
+                  │   - build/push central ECR     │
+                  └───────────────┬───────────────-┘
+                                  │ AssumeRole to tenant
+                                  │
+          ┌───────────────────────┴─-───────────────────────┐
+          │                                                 │
+          ▼                                                 ▼
+┌─────────────────────--┐                           ┌─────────────────────--┐
+│ Tenant A Account      │                           │ Tenant B Account      │
+│ Role: TenantDeployRole│                           │ Role: TenantDeployRole│
+│ Permissions:          │                           │ Permissions:          │
+│  - CloudFormation     │                           │  - CloudFormation     │
+│  - ECS / VPC / IAM    │                           │  - ECS / VPC / IAM    │
+│  - Pull from ECR      │                           │  - Pull from ECR      │
+└──────────┬─-----──────┘                           └─────────---┬───────---┘
+          │                                                   │
+          │ CloudFormation / ECS deploy                       │ CloudFormation / ECS deploy
+          ▼                                                   ▼
+┌──────────────-───┐                                  ┌─────────────────-┐
+│ Tenant A ECS     │                                  │ Tenant B ECS     │
+│ Tasks / Services │                                  │ Tasks / Services │
+│ VPC / Subnets    │                                  │ VPC / Subnets    │
+└───────────────-──┘                                  └─────────────────-┘
+
+------------------------------------------------------------------------
+
+### 🔄 Architecture Flow
+
+    Bitbucket Pipelines (OIDC)
+            ↓
+    Shared Account (BitbucketOIDCRole)
+            ↓ assume role
+    Tenant Account (TenantDeployRole)
+            ↓
+    Deploy (CloudFormation / ECS)
+
+------------------------------------------------------------------------
+
+### 🔑 Key Concepts
+
+------------------------------------------------------------------------
+
+### 1. Create Role in Tenant Account
+
+#### Role Name
+
+    TenantDeployRole
+
+#### 1.1 Trust Policy
+
+``` json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::<SHARED_ACCOUNT_ID>:role/BitbucketOIDCRole"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+```
+
+#### 1.2 Permission Policy
+
+``` json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:*",
+        "ecs:*",
+        "iam:PassRole"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+------------------------------------------------------------------------
+
+### 2. Configure Role in Shared Account
+
+#### Role Name
+
+    BitbucketOIDCRole
+
+#### Permission Policy
+
+``` json
+{
+  "Effect": "Allow",
+  "Action": "sts:AssumeRole",
+  "Resource": "arn:aws:iam::<TENANT_ACCOUNT_ID>:role/TenantDeployRole"
+}
+```
+
+------------------------------------------------------------------------
+
+### 3. Using AssumeRole via AWS CLI
+
+#### 3.1 Call STS
+
+``` bash
+aws sts assume-role \
+  --role-arn arn:aws:iam::<TENANT_ACCOUNT_ID>:role/TenantDeployRole \
+  --role-session-name ci-session
+```
+
+#### 3.2 Export Credentials
+
+``` bash
+export AWS_ACCESS_KEY_ID=XXX
+export AWS_SECRET_ACCESS_KEY=XXX
+export AWS_SESSION_TOKEN=XXX
+```
+
+#### 3.3 Deploy
+
+``` bash
+aws cloudformation deploy ...
+aws ecs update-service ...
+```
+
+------------------------------------------------------------------------
+
+### 4. Bitbucket Pipeline Example
+
+``` bash
+CREDS=$(aws sts assume-role \
+  --role-arn $TENANT_ROLE_ARN \
+  --role-session-name ci-session)
+
+export AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r .Credentials.AccessKeyId)
+export AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)
+export AWS_SESSION_TOKEN=$(echo $CREDS | jq -r .Credentials.SessionToken)
+
+aws cloudformation deploy ...
+```
+
+------------------------------------------------------------------------
+
+### 🔐 ECR Cross-Account Access
+
+``` json
+{
+  "Effect": "Allow",
+  "Principal": {
+    "AWS": "arn:aws:iam::<TENANT_ACCOUNT_ID>:root"
+  },
+  "Action": [
+    "ecr:BatchGetImage",
+    "ecr:GetDownloadUrlForLayer"
+  ]
+}
+```
+
+------------------------------------------------------------------------
+
+#### ✅ Summary
+
+1.  Tenant role trusts Shared role
+2.  Shared role can assume tenant role
+3.  CI/CD calls STS
+4.  Use temporary credentials to deploy
+
+------------------------------------------------------------------------
+
+#### ⚠️ Common Issues
+
+-   AccessDenied → Trust policy issue
+-   Deployment fails → Missing permissions
+-   ECS cannot pull image → ECR policy missing
+-   Token expired → STS timeout
+
+------------------------------------------------------------------------
+
+#### 🚀 Best Practices
+
+-   Use OIDC instead of static credentials
+-   Apply least privilege
+-   Separate roles per environment
+-   Enable CloudTrail logging
