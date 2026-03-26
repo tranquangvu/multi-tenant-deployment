@@ -169,6 +169,7 @@ In a multi-tenant architecture using multiple AWS accounts:
 -   Instead, it uses **AssumeRole** to access each tenant account
     securely
 
+```
                   ┌───────────────────────────────┐
                   │       Bitbucket Pipelines     │
                   │  (OIDC token, CI/CD jobs)     │
@@ -205,6 +206,7 @@ In a multi-tenant architecture using multiple AWS accounts:
 │ Tasks / Services │                                  │ Tasks / Services │
 │ VPC / Subnets    │                                  │ VPC / Subnets    │
 └───────────────-──┘                                  └─────────────────-┘
+```
 
 ------------------------------------------------------------------------
 
