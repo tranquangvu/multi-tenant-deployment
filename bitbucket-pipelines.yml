@@ -28,8 +28,8 @@ definitions:
           - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
           - ./scripts/upload-config-templates.sh
 
-    - step: &deploy-base-staging
-        name: Deploy Base Staging
+    - step: &deploy-base-production
+        name: Deploy Base Production
         oidc: true
         script:
           - chmod +x ./scripts/*.sh
@@ -39,25 +39,14 @@ definitions:
           - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
           - export AWS_REGION="$AWS_DEFAULT_REGION"
           - ./scripts/deploy-shared.sh
-          - ./scripts/deploy-tenant.sh base staging
-
-    - step: &validate-base-staging
-        name: Validate Base Staging succeeded
-        oidc: true
-        script:
-          - chmod +x ./scripts/*.sh
-          - export AWS_WEB_IDENTITY_TOKEN_FILE="$(pwd)/web-identity-token"
-          - echo "$BITBUCKET_STEP_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
-          - export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
-          - export AWS_REGION="$AWS_DEFAULT_REGION"
-          - ./scripts/validate-stack-success.sh mt-base-staging
+          - ./scripts/deploy-tenant.sh base production
 
 pipelines:
   branches:
     main:
       - step: *oidc-verify
       - step: *upload-config-templates
-      - step: *deploy-base-staging
+      - step: *deploy-base-production
       - step:
           name: Approve Production Deployment
           trigger: manual
@@ -92,8 +81,6 @@ pipelines:
               else
                 ./scripts/deploy-tenant.sh "$DEPLOY_TENANT_ID"
               fi
-
-
 
     # Delete root stack for one tenant.
     # - If DELETE_ENVIRONMENT is provided: delete that environment for the tenant.
