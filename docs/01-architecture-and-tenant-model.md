@@ -121,30 +121,13 @@ Optional extensions (for promotion and versioning):
 - `current_version` / `last_deployed_at`: Updated by pipeline or external process.
 - `approval_required`: Boolean to enforce approval for this tenant.
 
-## 3. App-to-Tenant Mapping
-
-- Each application has one environment per tenant. The current implementation uses **2 applications** (foo, baz), defined in `config/app-registry.yaml`; the design supports adding more.
-- Mapping is implicit: **App × Tenant** = one environment (one DB, one config, one set of secrets).
-- Document the list of application IDs in the same config repo, e.g.:
-
-```yaml
-# config/app-registry.yaml
-applications:
-  - id: foo
-    name: FooApp
-  - id: baz
-    name: BazApp
-```
-
-- Deployment matrix: for each promotion run, pipeline reads `config/tenant-registry.yaml` and optionally `config/app-registry.yaml` to decide target tenants (and which apps to deploy where).
-
 ## 4. Naming Conventions
 
 ### 4.1 AWS Accounts (Landing Zone Multi-Account)
 
-- **Base tenant**: One or more accounts, e.g. `{org}-base-staging`, `{org}-base-production` or a single `{org}-base` with environments inside.
-- **Silo tenants**: One account per tenant: `{org}-tenant-{tenant-id}` (e.g. `acme-tenant-abc`).
-- **Central log account**: `{org}-log` or `{org}-central-log`; receives cross-account logs from all workload accounts.
+- **Base tenant**: One or more accounts, e.g. `{tenant}-base-staging`, `{tenant}-base-production` or a single `{tenant}-base` with environments inside.
+- **Silo tenants**: One account per tenant: `{tenant}-tenant-{tenant-id}` (e.g. `acme-tenant-abc`).
+- **Central log account**: `{tenant}-log` or `{tenant}-central-log`; receives cross-account logs from all workload accounts.
 - All accounts sit under the same **AWS Organization / Landing Zone (LZA)** for governance, SCPs, and centralized logging.
 
 ### 4.2 CloudFormation Stacks
@@ -154,9 +137,9 @@ applications:
 
 ### 4.3 Bitbucket Repositories
 
-- **Application code**: `{org}/{app-id}` or `{org}/{app-id}-service`.
-- **Configuration / tenant registry**: `{org}/tenant-config` or `{org}/multi-tenant-config`.
-- **Infrastructure (CloudFormation)**: `{org}/infrastructure` or `{org}/multi-tenant-iac`.
+- **Application code**: `{tenant}/{app-id}` or `{tenant}/{app-id}-service`.
+- **Configuration / tenant registry**: `{tenant}/tenant-config` or `{tenant}/multi-tenant-config`.
+- **Infrastructure (CloudFormation)**: `{tenant}/infrastructure` or `{tenant}/multi-tenant-iac`.
 
 ### 4.4 Pipelines
 

@@ -24,10 +24,10 @@ The design **supports and recommends** an **AWS Landing Zone (LZA)** where:
 
 | Account purpose | Naming example | Usage |
 |-----------------|----------------|--------|
-| Base (foundation) | `{org}-base` or `{org}-base-{env}` | First deployment, validation, smoke tests. |
-| Silo tenant (e.g. abc) | `{org}-tenant-{tenant-id}` (e.g. `{org}-tenant-abc`) | Isolated env for that tenant (all apps per `config/app-registry.yaml`). |
-| Silo tenant B … N | `{org}-tenant-{id}` | Same for other tenants. |
-| Central log | `{org}-log` | Log aggregation from all tenant and base accounts. |
+| Base (foundation) | `{tenant}-base` or `{tenant}-base-{env}` | First deployment, validation, smoke tests. |
+| Silo tenant (e.g. abc) | `{tenant}-tenant-{tenant-id}` (e.g. `{tenant}-tenant-abc`) | Isolated env for that tenant (all apps per `config/app-registry.yaml`). |
+| Silo tenant B … N | `{tenant}-tenant-{id}` | Same for other tenants. |
+| Central log | `{tenant}-log` | Log aggregation from all tenant and base accounts. |
 
 The **tenant registry** (`config/tenant-registry.yaml`) holds the mapping of tenant + environment → AWS account ID; the pipeline assumes a role in each target account to deploy. See [02-architecture-and-tenant-model.md](02-architecture-and-tenant-model.md) for the architecture diagram and schema.
 
@@ -135,7 +135,7 @@ Ensure base tenant stacks provision at least:
 
 ## 5. Central Log Account
 
-- **Account**: Dedicated log account (e.g. `{org}-log`).
+- **Account**: Dedicated log account (e.g. `{tenant}-log`).
 - **Ingestion**: From each tenant account, use CloudWatch Logs cross-account subscription or Kinesis Data Streams, or S3 replication to log account; then aggregate in OpenSearch or CloudWatch Logs Insights.
 - **Resource policy**: Each tenant account’s log group (or Kinesis stream) allows the central log account to read.
 - Document exact log sources (pipelines, app logs, CloudFormation events) in [06-logging-monitoring-and-operations.md](06-logging-monitoring-and-operations.md).

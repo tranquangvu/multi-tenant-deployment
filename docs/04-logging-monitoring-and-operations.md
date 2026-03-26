@@ -6,7 +6,7 @@ This document describes **centralized logging**, **monitoring**, and **alerting*
 
 ### 1.1 Architecture
 
-- **Central log account**: Dedicated AWS account (e.g. `{org}-log`) that receives logs from all tenant accounts (including base).
+- **Central log account**: Dedicated AWS account (e.g. `{tenant}-log`) that receives logs from all tenant accounts (including base).
 - **Per-tenant accounts**: Application logs, pipeline logs, and CloudFormation/API logs are shipped to the central account (e.g. via CloudWatch Logs subscription filters, Kinesis Data Streams, or S3 replication).
 
 ### 1.2 Log Sources to Aggregate
