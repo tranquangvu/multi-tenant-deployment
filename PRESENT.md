@@ -49,48 +49,7 @@ This `shared` section is now used by upload step auth and region resolution.
 
 ---
 
-## 4) Deployment Workflow (End-to-End)
-
-### A. Upload templates/config
-
-Script: `scripts/upload-config-templates.sh`
-
-- Ensures S3 bucket exists (auto-creates if missing).
-- Uploads template files to `s3://<bucket>/<template-prefix>/`.
-- Uploads config files to `s3://<bucket>/<config-prefix>/`.
-
-### B. Deploy shared stack
-
-Script: `scripts/deploy-shared.sh`
-
-- Deploys shared resources once per account/region.
-
-### C. Deploy tenant stack
-
-Script: `scripts/deploy-tenant.sh <tenant-id> [environment]`
-
-- Resolves target region from registry.
-- Validates current AWS account against `accountId` (unless skipped).
-- Merges SSM network parameters via:
-  - `scripts/utils/tenant-network-ssm-params.py`
-- Deploys root stack via `scripts/deploy-stack.sh`.
-- If env is omitted, deploys all environments for that tenant.
-
----
-
-## 5) Delete Workflow
-
-Script: `scripts/delete-tenant.sh <tenant-id> [environment]`
-
-- Same tenant/env validation pattern as deploy.
-- Same account check pattern.
-- Deletes root stack and waits for completion.
-- Safety gate:
-  - must set `CONFIRM_DELETE_TENANT=1`
-
----
-
-## 6) Bitbucket Pipeline Workflow
+## 4) Bitbucket Pipeline Workflow + Script Execution
 
 Primary file: `bitbucket-pipelines.yml`
 
@@ -120,9 +79,26 @@ Role ARN format:
 
 - `arn:aws:iam::<accountId>:role/<bitbucketOidcRoleName>`
 
+### Which scripts run in each pipeline stage
+
+- **Upload config/templates**
+  - `scripts/upload-config-templates.sh`
+  - Ensures S3 bucket exists (auto-creates if missing)
+  - Uploads template files to `s3://<bucket>/<template-prefix>/`
+  - Uploads config files to `s3://<bucket>/<config-prefix>/`
+- **Deploy base production / deploy-tenant / deploy-tenants-production**
+  - `scripts/deploy-shared.sh` (shared resources)
+  - `scripts/deploy-tenant.sh <tenant-id> [environment]`
+  - Internally calls `scripts/deploy-stack.sh`
+  - Merges SSM network parameters via `scripts/utils/tenant-network-ssm-params.py`
+- **Delete tenant**
+  - `scripts/delete-tenant.sh <tenant-id> [environment]`
+  - Deletes root stack and waits for completion
+  - Safety gate: requires `CONFIRM_DELETE_TENANT=1`
+
 ---
 
-## 7) CI Dependency Management
+## 5) CI Dependency Management
 
 Script: `scripts/install-ci-deps.sh`
 
@@ -136,7 +112,7 @@ Script: `scripts/install-ci-deps.sh`
 
 ---
 
-## 8) Common Troubleshooting
+## 6) Common Troubleshooting
 
 ### OIDC / Assume role issues
 
@@ -157,25 +133,3 @@ Script: `scripts/install-ci-deps.sh`
 ### Missing Python package in CI
 
 - Re-run with `scripts/install-ci-deps.sh` included in the step.
-
----
-
-## 9) Suggested Live Demo Flow (10-15 mins)
-
-1. Show `tenant-registry.yaml` and explain tenant + shared sections.
-2. Show dynamic role scripts:
-   - `get-shared-oidc-role-arn.sh`
-   - `get-tenant-oidc-role-arn.sh`
-3. Run upload script (show bucket auto-create behavior).
-4. Deploy one tenant environment (`deploy-tenant` path).
-5. Show root stack naming and outputs in CloudFormation.
-6. Trigger safe delete with confirmation flag.
-
----
-
-## 10) Key Takeaways
-
-- We now have a repeatable, tenant-driven, OIDC-based infra deployment workflow.
-- Authentication and target account selection are driven by config, not hardcoded vars.
-- Operational scripts cover full lifecycle (upload, deploy, promote, delete) with safety checks.
-- This setup improves scalability for adding more tenants/environments with minimal pipeline changes.

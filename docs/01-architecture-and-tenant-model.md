@@ -61,12 +61,14 @@ tenants:
         networkVpcName: base-staging-vpc
         networkPublicSubnetNames: [public-subnet-a, public-subnet-b]
         networkPrivateSubnetNames: [private-subnet-a, private-subnet-b]
+        bitbucketOidcRoleName: bitbucket-oidc-role
       production:
         accountId: "222222222222"
         accountName: org-base-production
         networkVpcName: base-production-vpc
         networkPublicSubnetNames: [public-subnet-a, public-subnet-b]
         networkPrivateSubnetNames: [private-subnet-a, private-subnet-b]
+        bitbucketOidcRoleName: bitbucket-oidc-role
 
   abc:
     id: abc
@@ -79,6 +81,7 @@ tenants:
         networkVpcName: abc-vpc
         networkPublicSubnetNames: [public-subnet-a, public-subnet-b]
         networkPrivateSubnetNames: [private-subnet-a, private-subnet-b]
+        bitbucketOidcRoleName: bitbucket-oidc-role
 
   xyz:
     id: xyz
@@ -91,6 +94,13 @@ tenants:
         networkVpcName: xyz-vpc
         networkPublicSubnetNames: [public-subnet-a, public-subnet-b]
         networkPrivateSubnetNames: [private-subnet-a, private-subnet-b]
+        bitbucketOidcRoleName: bitbucket-oidc-role
+
+shared:
+  region: ap-southeast-1
+  accountId: "000000000000"
+  accountName: org-shared
+  bitbucketOidcRoleName: bitbucket-oidc-role
 ```
 
 ### 2.2 Field Definitions
