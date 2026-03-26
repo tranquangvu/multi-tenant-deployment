@@ -24,19 +24,19 @@ tenants:
     region: ap-southeast-1
     environments:
       staging:
-        accountId: '091457645177'
-        accountName: 'GoldenOwl'
-        networkVpcName: 'Sanbox-VPC'
-        networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
-        networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
-        bitbucketOidcRoleName: 'bitbucket-oidc-role'
+        accountId: 091457645177
+        accountName: GoldenOwl
+        networkVpcName: Sanbox-VPC
+        networkPrivateSubnetNames: [PrivateAppA, PrivateAppB]
+        networkPublicSubnetNames: [PublicInboundA, PublicInboundB]
+        bitbucketOidcRoleName: bitbucket-oidc-role
       production:
-        accountId: '091457645177'
-        accountName: 'GoldenOwl'
-        networkVpcName: 'Sanbox-VPC'
-        networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
-        networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
-        bitbucketOidcRoleName: 'bitbucket-oidc-role'
+        accountId: 091457645177
+        accountName: GoldenOwl
+        networkVpcName: Sanbox-VPC
+        networkPrivateSubnetNames: [PrivateAppA, PrivateAppB]
+        networkPublicSubnetNames: [PublicInboundA, PublicInboundB]
+        bitbucketOidcRoleName: bitbucket-oidc-role
 
   abc:
     id: abc
@@ -44,12 +44,12 @@ tenants:
     region: ap-southeast-1
     environments:
       production:
-        accountId: '091457645177'
-        accountName: 'GoldenOwl'
-        networkVpcName: 'ABC'
-        networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
-        networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
-        bitbucketOidcRoleName: 'bitbucket-oidc-role'
+        accountId: 091457645177
+        accountName: GoldenOwl
+        networkVpcName: ABC
+        networkPrivateSubnetNames: [PrivateAppA, PrivateAppB]
+        networkPublicSubnetNames: [PublicInboundA, PublicInboundB]
+        bitbucketOidcRoleName: bitbucket-oidc-role
 
   xyz:
     id: xyz
@@ -57,15 +57,15 @@ tenants:
     region: ap-southeast-1
     environments:
       production:
-        accountId: '091457645177'
-        accountName: 'GoldenOwl'
-        networkVpcName: 'XYZ'
-        networkPrivateSubnetNames: ['PrivateAppA', 'PrivateAppB']
-        networkPublicSubnetNames: ['PublicInboundA', 'PublicInboundB']
-        bitbucketOidcRoleName: 'bitbucket-oidc-role'
+        accountId: 091457645177
+        accountName: GoldenOwl
+        networkVpcName: XYZ
+        networkPrivateSubnetNames: [PrivateAppA, PrivateAppB]
+        networkPublicSubnetNames: [PublicInboundA, PublicInboundB]
+        bitbucketOidcRoleName: bitbucket-oidc-role
 
 shared:
   region: ap-southeast-1
-  accountId: '091457645177'
-  accountName: 'GoldenOwl'
-  bitbucketOidcRoleName: 'bitbucket-oidc-role'
+  accountId: 091457645177
+  accountName: GoldenOwl
+  bitbucketOidcRoleName: bitbucket-oidc-role
