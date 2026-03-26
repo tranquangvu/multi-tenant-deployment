@@ -42,7 +42,7 @@ if ! python3 -m pip --version >/dev/null 2>&1; then
 fi
 
 if ! python3 -c "import yaml" >/dev/null 2>&1; then
-  python3 -m pip install --quiet --no-cache-dir --break-system-packages pyyaml
+  python3 -m pip install --quiet --no-cache-dir pyyaml
 fi
 
 if ! command -v jq >/dev/null 2>&1; then
