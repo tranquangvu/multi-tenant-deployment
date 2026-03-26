@@ -137,7 +137,7 @@ if [[ ! -x "$DEPLOY_STACK" ]]; then
   exit 1
 fi
 
-NETWORK_PY="$SCRIPT_DIR/py/tenant-network-ssm-params.py"
+NETWORK_PY="$SCRIPT_DIR/utils/tenant-network-ssm-params.py"
 if [[ ! -f "$NETWORK_PY" ]]; then
   echo "Missing $NETWORK_PY" >&2
   exit 1

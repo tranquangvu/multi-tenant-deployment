@@ -72,7 +72,7 @@ Script: `scripts/deploy-tenant.sh <tenant-id> [environment]`
 - Resolves target region from registry.
 - Validates current AWS account against `accountId` (unless skipped).
 - Merges SSM network parameters via:
-  - `scripts/py/tenant-network-ssm-params.py`
+  - `scripts/utils/tenant-network-ssm-params.py`
 - Deploys root stack via `scripts/deploy-stack.sh`.
 - If env is omitted, deploys all environments for that tenant.
 

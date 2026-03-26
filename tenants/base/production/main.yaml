@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: "Root stack - registers all module stacks via TemplateURL (S3). One per (tenant, environment)."
 # Deploy: upload templates to S3, then deploy with params merged for network paths.
 # The five *SsmPath parameters are usually omitted from params.json: ./scripts/deploy-tenant.sh
-# merges them from config/tenant-registry.yaml (scripts/py/tenant-network-ssm-params.py). At deploy,
+# merges them from config/tenant-registry.yaml (scripts/utils/tenant-network-ssm-params.py). At deploy,
 # each value is the SSM parameter *name* (e.g. /accelerator/network/vpc/MyVpc/id). Parameter types
 # AWS::SSM::Parameter::Value<...> tell CloudFormation to resolve that name to the VPC/subnet ID
 # at deploy time—no {{resolve:ssm:...}} syntax is required in this template for those inputs.
