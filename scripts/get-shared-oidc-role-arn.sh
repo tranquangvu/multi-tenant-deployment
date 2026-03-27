@@ -16,27 +16,5 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
-python3 - "$REGISTRY" <<'PY'
-import re
-import sys
-try:
-    import yaml
-except Exception:
-    raise SystemExit("python package 'pyyaml' is required")
-
-registry_path = sys.argv[1]
-with open(registry_path, "r", encoding="utf-8") as f:
-    data = yaml.safe_load(f) or {}
-
-shared = data.get("shared") or {}
-account_id = str(shared.get("accountId", "")).strip()
-role_name = str(shared.get("bitbucketOidcRoleName", "")).strip()
-
-if not re.fullmatch(r"\d{12}", account_id):
-    raise SystemExit("invalid or missing shared.accountId")
-if not role_name:
-    raise SystemExit("missing shared.bitbucketOidcRoleName")
-
-print(f"arn:aws:iam::{account_id}:role/{role_name}")
-PY
+python3 "$SCRIPT_DIR/utils/tenant-registry-query.py" "$REGISTRY" shared-oidc-role-arn
 

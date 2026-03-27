@@ -20,7 +20,7 @@
   - `get-tenant-envs.sh` — List environments for a tenant from registry.
   - `get-tenant-region.sh` — Output region for a tenant from registry.
   - `get-tenant-account-id.sh` — Output `accountId` for a (tenant, environment).
-  - `utils/tenant-network-ssm-params.py` — Emit JSON array of CloudFormation parameters for SSM paths (used by `deploy-tenant.sh`).
+  - `utils/tenant-network-params.py` — Emit JSON array of CloudFormation parameters for SSM paths (used by `deploy-tenant.sh`).
 - **`docs/`** — Design and runbooks (see [docs/README.md](docs/README.md)).
 
 ## Tenant layout
@@ -65,7 +65,7 @@ multi-tenant-deployment/
     ├── get-tenant-envs.sh
     ├── get-tenant-region.sh
     ├── get-tenant-account-id.sh
-    └── utils/tenant-network-ssm-params.py
+    └── utils/tenant-network-params.py
 ```
 
 ## Tenant registry schema
@@ -128,7 +128,7 @@ All root stacks (shared and per-tenant) pull module templates from S3. Upload te
    ```bash
    export INFRA_S3_BUCKET=your-s3-bucket
    export AWS_DEFAULT_REGION="$(./scripts/get-tenant-region.sh base)"
-   NET="$(python3 ./scripts/utils/tenant-network-ssm-params.py ./config/tenant-registry.yaml base staging)"
+   NET="$(python3 ./scripts/utils/tenant-network-params.py ./config/tenant-registry.yaml base staging)"
    jq --argjson net "$NET" '. + $net' tenants/base/staging/params.json > /tmp/merged-params.json
    ./scripts/deploy-stack.sh mt-base-staging tenants/base/staging/main.yaml /tmp/merged-params.json
    ```

@@ -24,24 +24,4 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
-python3 - "$TENANT_REGISTRY" "$TENANT_ID" <<'PY'
-import sys
-try:
-    import yaml
-except Exception:
-    raise SystemExit("python package 'pyyaml' is required")
-
-registry_path = sys.argv[1]
-tenant_id = sys.argv[2]
-
-with open(registry_path, "r", encoding="utf-8") as f:
-    data = yaml.safe_load(f) or {}
-
-tenant = (data.get("tenants") or {}).get(tenant_id)
-if not tenant:
-    raise SystemExit("unknown tenant")
-envs = tenant.get("environments")
-if not isinstance(envs, dict) or not envs:
-    raise SystemExit("no environments")
-print(" ".join(envs.keys()))
-PY
+python3 "$SCRIPT_DIR/utils/tenant-registry-query.py" "$TENANT_REGISTRY" tenant-envs --tenant "$TENANT_ID"

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Emit CloudFormation parameter-overrides JSON array for network SSM paths.
-Usage: tenant-network-ssm-params.py <tenant-registry.yaml> <tenant-id> <environment>
+Usage: tenant-network-params.py <tenant-registry.yaml> <tenant-id> <environment>
 Env: SSM_NETWORK_PREFIX — optional root path
      (default from tenant ssmNetworkPrefix or /accelerator/network)
 """
@@ -26,7 +26,7 @@ def subnet_param(prefix: str, vpc: str, subnet_name: str) -> str:
 
 def main() -> None:
     if len(sys.argv) < 4:
-        abort("usage: tenant-network-ssm-params.py <registry.yaml> <tenant> <env>")
+        abort("usage: tenant-network-params.py <registry.yaml> <tenant> <env>")
     registry_path = sys.argv[1]
     tenant_id = sys.argv[2]
     env_name = sys.argv[3]

@@ -16,21 +16,4 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
-python3 - "$REGISTRY" <<'PY'
-import sys
-try:
-    import yaml
-except Exception:
-    raise SystemExit("python package 'pyyaml' is required")
-
-registry_path = sys.argv[1]
-with open(registry_path, "r", encoding="utf-8") as f:
-    data = yaml.safe_load(f) or {}
-
-shared = data.get("shared") or {}
-region = str(shared.get("region", "")).strip()
-if not region:
-    raise SystemExit("missing shared.region")
-print(region)
-PY
-
+python3 "$SCRIPT_DIR/utils/tenant-registry-query.py" "$REGISTRY" shared-region

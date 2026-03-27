@@ -90,7 +90,7 @@ Role ARN format:
   - `scripts/deploy-shared.sh` (shared resources)
   - `scripts/deploy-tenant.sh <tenant-id> [environment]`
   - Internally calls `scripts/deploy-stack.sh`
-  - Merges SSM network parameters via `scripts/utils/tenant-network-ssm-params.py`
+  - Merges SSM network parameters via `scripts/utils/tenant-network-params.py`
 - **Delete tenant**
   - `scripts/delete-tenant.sh <tenant-id> [environment]`
   - Deletes root stack and waits for completion

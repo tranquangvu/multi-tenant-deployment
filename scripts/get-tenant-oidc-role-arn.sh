@@ -18,31 +18,4 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
-python3 - "$REGISTRY" "$TENANT_ID" "$ENV_NAME" <<'PY'
-import re
-import sys
-try:
-    import yaml
-except Exception:
-    raise SystemExit("python package 'pyyaml' is required")
-
-registry_path, tenant_id, env_name = sys.argv[1:4]
-with open(registry_path, "r", encoding="utf-8") as f:
-    data = yaml.safe_load(f) or {}
-
-tenant = (data.get("tenants") or {}).get(tenant_id)
-if not tenant:
-    raise SystemExit("unknown tenant")
-env = (tenant.get("environments") or {}).get(env_name)
-if not env:
-    raise SystemExit("unknown environment")
-
-account_id = str(env.get("accountId", "")).strip()
-role_name = str(env.get("bitbucketOidcRoleName", "")).strip()
-if not re.fullmatch(r"\d{12}", account_id):
-    raise SystemExit("invalid or missing accountId")
-if not role_name:
-    raise SystemExit("missing bitbucketOidcRoleName")
-
-print(f"arn:aws:iam::{account_id}:role/{role_name}")
-PY
+python3 "$SCRIPT_DIR/utils/tenant-registry-query.py" "$REGISTRY" tenant-oidc-role-arn --tenant "$TENANT_ID" --env "$ENV_NAME"
