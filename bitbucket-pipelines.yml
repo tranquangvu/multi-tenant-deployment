@@ -60,6 +60,52 @@ pipelines:
             - echo "Approved, continue to production"
 
   custom:
+    # Add and scaffold a new tenant in this repository:
+    # - Updates config/tenant-registry.yaml
+    # - Copies tenants/base/production -> tenants/<tenant-id>/production
+    add-tenant:
+      - variables:
+          - name: NEW_TENANT_ID
+            default: ""
+          - name: NEW_TENANT_NAME
+            default: ""
+          - name: NEW_TENANT_REGION
+            default: "ap-southeast-1"
+          - name: NEW_TENANT_ACCOUNT_ID
+            default: ""
+          - name: NEW_TENANT_ACCOUNT_NAME
+            default: ""
+          - name: NEW_TENANT_NETWORK_VPC_NAME
+            default: ""
+          - name: NEW_TENANT_PUBLIC_SUBNETS
+            default: "PublicInboundA,PublicInboundB"
+          - name: NEW_TENANT_PRIVATE_SUBNETS
+            default: "PrivateAppA,PrivateAppB"
+          - name: NEW_TENANT_OIDC_ROLE_NAME
+            default: "bitbucket-oidc-role"
+      - step:
+          name: Add tenant scaffold
+          script:
+            - chmod +x ./scripts/*.sh
+            - ./scripts/install-ci-deps.sh
+            - |
+              ./scripts/add-tenant.sh \
+                --tenant-id "$NEW_TENANT_ID" \
+                --tenant-name "$NEW_TENANT_NAME" \
+                --region "$NEW_TENANT_REGION" \
+                --account-id "$NEW_TENANT_ACCOUNT_ID" \
+                --account-name "$NEW_TENANT_ACCOUNT_NAME" \
+                --network-vpc-name "$NEW_TENANT_NETWORK_VPC_NAME" \
+                --network-public-subnets "$NEW_TENANT_PUBLIC_SUBNETS" \
+                --network-private-subnets "$NEW_TENANT_PRIVATE_SUBNETS" \
+                --bitbucket-oidc-role-name "$NEW_TENANT_OIDC_ROLE_NAME"
+      - step:
+          name: Create tenant onboarding PR
+          script:
+            - chmod +x ./scripts/*.sh
+            - ./scripts/install-ci-deps.sh
+            - ./scripts/add-tenant-pr.sh
+
     # Deploy root stack for one tenant.
     # - If DEPLOY_ENVIRONMENT is provided: deploy that environment for the tenant.
     # - If DEPLOY_ENVIRONMENT is empty/omitted: deploy all environments for the tenant from tenant-registry.yaml.

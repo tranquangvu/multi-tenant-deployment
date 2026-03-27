@@ -17,6 +17,7 @@
   - `upload-config-templates.sh` — Upload `templates/*.yaml` (and `config/*.yaml`) to S3.
   - `deploy-stack.sh` — Deploy a single CloudFormation stack (used by other scripts).
   - `deploy-tenant.sh` — Deploy root stack for one tenant (and optional environment); sets region from registry, merges VPC/subnet SSM parameter names from the registry, and optionally checks AWS account vs `accountId`.
+  - `add-tenant.sh` — Scaffold a new tenant: updates `config/tenant-registry.yaml`, copies `tenants/base/production` to `tenants/<tenant>/production`, and rewrites `TenantId` in copied `params.json`.
   - `get-tenant-envs.sh` — List environments for a tenant from registry.
   - `get-tenant-region.sh` — Output region for a tenant from registry.
   - `get-tenant-account-id.sh` — Output `accountId` for a (tenant, environment).
